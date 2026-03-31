@@ -373,8 +373,11 @@ const ProducerAccount = () => {
                          </TableRow>
                        </>
                      )}
-                   </TableBody>
-                 </Table>
+                     </TableBody>
+                   </Table>
+                   <p className="text-xs text-muted-foreground mt-3 px-4 pb-2">
+                     * Monto neto = Total anticipos acumulados (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
+                   </p>
                  );
                })() : (
                  <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>

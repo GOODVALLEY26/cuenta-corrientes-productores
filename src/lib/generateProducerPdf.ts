@@ -119,7 +119,7 @@ export function generateProducerPdf(data: PdfData) {
     return row;
   });
 
-  const advHeaders: string[] = ['Mes', '¢/kg', 'Anticipo USD'];
+  const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
   if (showDiscount) {
     advHeaders.push('Desc. Secado', 'Neto USD');
   }
