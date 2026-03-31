@@ -16,6 +16,7 @@ const navItems = [
   { path: '/facturas-secado', label: 'Facturas Secado', icon: Receipt },
   { path: '/facturas-productores', label: 'Facturas Productores', icon: FileText },
   { path: '/flujos-pago', label: 'Flujos de Pago', icon: ArrowLeftRight },
+  { path: '/control-iva', label: 'Control IVA', icon: Percent },
   { path: '/tipo-cambio', label: 'Tipo de Cambio', icon: Settings },
 ];
 
