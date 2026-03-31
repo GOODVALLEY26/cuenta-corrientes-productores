@@ -376,18 +376,18 @@ const ProducerAccount = () => {
                        <TableCell className="font-medium">Anticipo Bruto</TableCell>
                        <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
                      </TableRow>
-                     <TableRow>
-                       <TableCell className="font-medium">Descuento Secado</TableCell>
-                       <TableCell className="text-right text-destructive">
-                         {data.dryingDiscountPerMonth > 0 && (data.method === 'descuento_usd' || data.method === 'cuotas')
-                           ? `-USD ${fmt(data.dryingDiscountPerMonth)}`
-                           : '-'}
-                       </TableCell>
-                     </TableRow>
-                     <TableRow className="bg-muted/50">
-                       <TableCell className="font-bold">Neto a Pagar</TableCell>
-                       <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
-                     </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Descuento Secado</TableCell>
+                        <TableCell className="text-right text-destructive">
+                          {data.nextDiscount > 0
+                            ? `-USD ${fmt(data.nextDiscount)}`
+                            : '-'}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="bg-muted/50">
+                        <TableCell className="font-bold">Neto a Pagar</TableCell>
+                        <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                      </TableRow>
                    </TableBody>
                  </Table>
               ) : (
