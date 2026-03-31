@@ -238,7 +238,6 @@ const ProducerAccount = () => {
                   <TableRow>
                      <TableHead>Mes</TableHead>
                      <TableHead className="text-right">¢/kg</TableHead>
-                     <TableHead className="text-right">Cálculo</TableHead>
                      <TableHead className="text-right">Anticipo USD</TableHead>
                      <TableHead className="text-right">Desc. Secado</TableHead>
                      <TableHead className="text-right">Neto a Pagar</TableHead>
@@ -247,7 +246,7 @@ const ProducerAccount = () => {
                 </TableHeader>
                 <TableBody>
                   {data.advances.length === 0 ? (
-                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
                      const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
                      const net = a.advance - discount;
@@ -255,7 +254,7 @@ const ProducerAccount = () => {
                        <TableRow key={a.month}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
                          <TableCell className="text-right">{a.centsPerKg}</TableCell>
-                         <TableCell className="text-right text-xs text-muted-foreground">{Number(data.dryKg).toLocaleString('es-CL')} × {a.centsPerKg} ÷ 100</TableCell>
+                         <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
                          <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
                          <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
@@ -270,7 +269,6 @@ const ProducerAccount = () => {
                    {data.advances.length > 0 && (
                      <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
-                       <TableCell></TableCell>
                        <TableCell></TableCell>
                        <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
                        <TableCell></TableCell>
@@ -297,12 +295,6 @@ const ProducerAccount = () => {
                      <TableRow>
                        <TableCell className="font-medium">Mes</TableCell>
                        <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
-                     </TableRow>
-                     <TableRow>
-                       <TableCell className="font-medium">Cálculo</TableCell>
-                       <TableCell className="text-right text-sm text-muted-foreground">
-                         {Number(data.dryKg).toLocaleString('es-CL')} kg × {data.nextAdvance.centsPerKg} ¢/kg ÷ 100
-                       </TableCell>
                      </TableRow>
                      <TableRow>
                        <TableCell className="font-medium">Anticipo Bruto</TableCell>
@@ -382,11 +374,6 @@ const ProducerAccount = () => {
                          </TableRow>
                        </>
                      )}
-                     <TableRow>
-                       <TableCell className="font-medium text-muted-foreground text-xs" colSpan={2}>
-                         Cálculo: Anticipos acumulados hasta {nextMonth} (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
-                       </TableCell>
-                     </TableRow>
                    </TableBody>
                  </Table>
                  );

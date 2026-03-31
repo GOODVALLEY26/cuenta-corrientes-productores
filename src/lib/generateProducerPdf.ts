@@ -99,11 +99,7 @@ export function generateProducerPdf(data: PdfData) {
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('2. Detalle de Anticipos', 15, y);
-  y += 3;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.text(`Cálculo: Kg Secos (${Number(data.dryKg).toLocaleString('es-CL')}) × Centavos/kg ÷ 100 = Anticipo USD`, 15, y + 4);
-  y += 8;
+  y += 6;
 
   const showDiscount = data.method === 'descuento_usd' || data.method === 'cuotas';
 
@@ -113,7 +109,6 @@ export function generateProducerPdf(data: PdfData) {
     const row: string[] = [
       MONTHS_FULL[a.month - 1],
       `${a.centsPerKg}`,
-      `${Number(data.dryKg).toLocaleString('es-CL')} × ${a.centsPerKg} ÷ 100`,
       `USD ${fmt(a.advance)}`,
     ];
     if (showDiscount) {
@@ -124,14 +119,14 @@ export function generateProducerPdf(data: PdfData) {
     return row;
   });
 
-  const advHeaders: string[] = ['Mes', '¢/kg', 'Cálculo', 'Anticipo USD'];
+  const advHeaders: string[] = ['Mes', '¢/kg', 'Anticipo USD'];
   if (showDiscount) {
     advHeaders.push('Desc. Secado', 'Neto USD');
   }
   advHeaders.push('Estado');
 
   // Totals row
-  const totalRow: string[] = ['TOTAL', '', '', `USD ${fmt(data.totalAdvances)}`];
+  const totalRow: string[] = ['TOTAL', '', `USD ${fmt(data.totalAdvances)}`];
   if (showDiscount) {
     totalRow.push('', '');
   }
@@ -196,7 +191,6 @@ export function generateProducerPdf(data: PdfData) {
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
     const paymentRows: string[][] = [
       ['Mes', nextMonth],
-      ['Cálculo', `${Number(data.dryKg).toLocaleString('es-CL')} kg × ${data.nextAdvance.centsPerKg} ¢/kg ÷ 100`],
       ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
     ];
 
@@ -256,7 +250,7 @@ export function generateProducerPdf(data: PdfData) {
       docRows.push(['Total Documento', `CLP ${fmtClp(montoCLP + iva)}`]);
     }
 
-    docRows.push(['Cálculo', `Anticipos acumulados hasta ${nextMonth} (USD ${fmt(data.docNeededUsd + data.totalInvoicedUsd)}) - Ya facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`]);
+    
 
     autoTable(doc, {
       startY: y,
@@ -267,13 +261,6 @@ export function generateProducerPdf(data: PdfData) {
       columnStyles: {
         0: { fontStyle: 'bold', cellWidth: 60 },
         1: { halign: 'right' },
-      },
-      didParseCell: (hookData) => {
-        const lastIdx = docRows.length - 1;
-        if (hookData.row.index === lastIdx && hookData.section === 'body') {
-          hookData.cell.styles.fontSize = 7;
-          hookData.cell.styles.fontStyle = 'italic';
-        }
       },
     });
     y = (doc as any).lastAutoTable.finalY + 10;
