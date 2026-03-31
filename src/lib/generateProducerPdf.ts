@@ -99,11 +99,7 @@ export function generateProducerPdf(data: PdfData) {
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('2. Detalle de Anticipos', 15, y);
-  y += 3;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.text(`Cálculo: Kg Secos (${Number(data.dryKg).toLocaleString('es-CL')}) × Centavos/kg ÷ 100 = Anticipo USD`, 15, y + 4);
-  y += 8;
+  y += 6;
 
   const showDiscount = data.method === 'descuento_usd' || data.method === 'cuotas';
 
