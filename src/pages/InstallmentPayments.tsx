@@ -31,10 +31,7 @@ const InstallmentPayments = () => {
   useEffect(() => {
     if (!user) return;
     supabase.from('producers').select('id, name, drying_payment_method').order('name').then(({ data }) => {
-      if (data) {
-        // Only show producers with cuotas payment method
-        setProducers(data.filter((p: any) => p.drying_payment_method === 'cuotas'));
-      }
+      if (data) setProducers(data);
     });
   }, [user]);
 
