@@ -33,12 +33,13 @@ const ProducerAccount = () => {
   }, [selectedId, year, user]);
 
   const loadData = async () => {
-    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes] = await Promise.all([
+    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes] = await Promise.all([
       supabase.from('advance_rates').select('*').eq('producer_id', selectedId).eq('year', year),
       supabase.from('dry_kg_reports').select('dry_kg').eq('producer_id', selectedId),
       supabase.from('producer_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('drying_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('exchange_rates').select('*').eq('year', year),
+      supabase.from('installment_payments').select('*').eq('producer_id', selectedId).eq('year', year).order('installment_number'),
     ]);
 
     const rates = ratesRes.data ?? [];
@@ -46,6 +47,7 @@ const ProducerAccount = () => {
     const prodInvoices = prodInvRes.data ?? [];
     const dryInvoices = dryInvRes.data ?? [];
     const exRates = exRatesRes.data ?? [];
+    const installmentPayments = instPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
     // Total facturado por productor (facturas + notas de débito)
@@ -68,10 +70,39 @@ const ProducerAccount = () => {
     const totalDryingUsd = dryInvoices.reduce((s, i) => s + Number(i.amount_usd ?? 0), 0);
     const totalDryingClp = dryInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
-    // Drying discount per month (for cuotas/descuento)
-    let dryingDiscountPerMonth = 0;
+    // Cuota logic for 'cuotas' method
     const method = producer.drying_payment_method;
-    if (method === 'descuento_usd' || method === 'cuotas') {
+    let dryingDiscountPerMonth = 0;
+    let cuotaClp = 0;
+    let cuotaTotalPaidClp = 0;
+    let cuotaTotalPaidUsd = 0;
+    let cuotaSaldoClp = 0;
+    let cuotaDetails: any[] = [];
+
+    if (method === 'cuotas') {
+      const numInstallments = advances.length + 1;
+      cuotaClp = totalDryingClp / numInstallments;
+
+      // Use installment_payments if available
+      cuotaDetails = installmentPayments;
+      cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+      cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
+      cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
+
+      // For the advance table, find the current month's installment
+      if (nextAdvance) {
+        const nextInst = installmentPayments.find((p: any) => p.month === nextAdvance.month);
+        if (nextInst && nextInst.exchange_rate) {
+          dryingDiscountPerMonth = Number(nextInst.amount_clp) / Number(nextInst.exchange_rate);
+        } else {
+          // Use last known exchange rate
+          const lastExRate = exRates.find(e => e.month === nextAdvance.month);
+          if (lastExRate) {
+            dryingDiscountPerMonth = cuotaClp / Number(lastExRate.rate);
+          }
+        }
+      }
+    } else if (method === 'descuento_usd') {
       for (const inv of dryInvoices) {
         const installments = inv.total_installments ?? 1;
         if (installments > 0 && inv.amount_usd) {
