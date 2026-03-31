@@ -247,37 +247,39 @@ const ProducerAccount = () => {
                 </TableHeader>
                 <TableBody>
                   {data.advances.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
-                  ) : data.advances.map((a: any) => {
-                    const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
-                    const net = a.advance - discount;
-                    return (
-                      <TableRow key={a.month}>
-                        <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                        <TableCell className="text-right">{a.centsPerKg}</TableCell>
-                        <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
-                        <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
-                        <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
-                            {a.paid ? 'Pagado' : 'Pendiente'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {data.advances.length > 0 && (
-                    <TableRow className="font-bold bg-muted/50">
-                      <TableCell>Total</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
+                   ) : data.advances.map((a: any) => {
+                     const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
+                     const net = a.advance - discount;
+                     return (
+                       <TableRow key={a.month}>
+                         <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
+                         <TableCell className="text-right">{a.centsPerKg}</TableCell>
+                         <TableCell className="text-right text-xs text-muted-foreground">{Number(data.dryKg).toLocaleString('es-CL')} × {a.centsPerKg} ÷ 100</TableCell>
+                         <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
+                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         <TableCell className="text-center">
+                           <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
+                             {a.paid ? 'Pagado' : 'Pendiente'}
+                           </Badge>
+                         </TableCell>
+                       </TableRow>
+                     );
+                   })}
+                   {data.advances.length > 0 && (
+                     <TableRow className="font-bold bg-muted/50">
+                       <TableCell>Total</TableCell>
+                       <TableCell></TableCell>
+                       <TableCell></TableCell>
+                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
+                       <TableCell></TableCell>
+                       <TableCell></TableCell>
+                       <TableCell className="text-center">
+                         <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
+                       </TableCell>
+                     </TableRow>
+                   )}
                 </TableBody>
               </Table>
             </CardContent>
