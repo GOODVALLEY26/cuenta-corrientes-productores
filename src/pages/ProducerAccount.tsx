@@ -106,6 +106,7 @@ const ProducerAccount = () => {
     const ivaSaldo = ivaSecado - ivaProductor;
 
     setData({
+      year,
       dryKg,
       totalInvoicedUsd,
       totalInvoicedClp,
