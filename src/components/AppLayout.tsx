@@ -17,6 +17,7 @@ const navItems = [
   { path: '/facturas-productores', label: 'Facturas Productores', icon: FileText },
   { path: '/flujos-pago', label: 'Flujos de Pago', icon: ArrowLeftRight },
   { path: '/control-iva', label: 'Control IVA', icon: Percent },
+  { path: '/cuenta-corriente', label: 'Cuenta Corriente', icon: BookOpen },
   { path: '/tipo-cambio', label: 'Tipo de Cambio', icon: Settings },
 ];
 
