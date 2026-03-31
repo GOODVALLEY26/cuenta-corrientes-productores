@@ -168,15 +168,31 @@ export function generateProducerPdf(data: PdfData) {
   doc.text('3. Secado', 15, y);
   y += 6;
 
+  const secadoBody: string[][] = [
+    ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
+  ];
+  if (data.totalDryingUsd > 0) {
+    secadoBody.push(['Total Secado USD', `USD ${fmt(data.totalDryingUsd)}`]);
+  }
+  if (data.method === 'cuotas' && data.cuotaClp) {
+    secadoBody.push(['Cuota Mensual CLP', `CLP ${fmtClp(data.cuotaClp)} (${data.advances.length}+1 cuotas)`]);
+    secadoBody.push(['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`]);
+    if ((data.cuotaTotalPaidUsd ?? 0) > 0) {
+      secadoBody.push(['Total Pagado USD', `USD ${fmt(data.cuotaTotalPaidUsd ?? 0)}`]);
+    }
+    secadoBody.push(['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`]);
+  } else if (showDiscount) {
+    secadoBody.push(['Descuento Mensual', `USD ${fmt(data.dryingDiscountPerMonth)}/mes`]);
+  } else {
+    secadoBody.push(['Descuento Mensual', 'No aplica (pago directo)']);
+  }
+
   autoTable(doc, {
     startY: y,
     margin: { left: 15, right: 15 },
     theme: 'grid',
     headStyles: { fillColor: [60, 60, 60] },
-    body: [
-      ['Total Secado', `USD ${fmt(data.totalDryingUsd)}  |  CLP ${fmtClp(data.totalDryingClp)}`],
-      ['Descuento Mensual', showDiscount ? `USD ${fmt(data.dryingDiscountPerMonth)}/mes` : 'No aplica (pago directo)'],
-    ],
+    body: secadoBody,
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 60 },
       1: { halign: 'right' },
