@@ -236,47 +236,50 @@ const ProducerAccount = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mes</TableHead>
-                    <TableHead className="text-right">¢/kg</TableHead>
-                    <TableHead className="text-right">Anticipo USD</TableHead>
-                    <TableHead className="text-right">Desc. Secado</TableHead>
-                    <TableHead className="text-right">Neto a Pagar</TableHead>
-                    <TableHead className="text-center">Estado</TableHead>
+                     <TableHead>Mes</TableHead>
+                     <TableHead className="text-right">¢/kg</TableHead>
+                     <TableHead className="text-right">Cálculo</TableHead>
+                     <TableHead className="text-right">Anticipo USD</TableHead>
+                     <TableHead className="text-right">Desc. Secado</TableHead>
+                     <TableHead className="text-right">Neto a Pagar</TableHead>
+                     <TableHead className="text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.advances.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
-                  ) : data.advances.map((a: any) => {
-                    const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
-                    const net = a.advance - discount;
-                    return (
-                      <TableRow key={a.month}>
-                        <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                        <TableCell className="text-right">{a.centsPerKg}</TableCell>
-                        <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
-                        <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
-                        <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
-                            {a.paid ? 'Pagado' : 'Pendiente'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {data.advances.length > 0 && (
-                    <TableRow className="font-bold bg-muted/50">
-                      <TableCell>Total</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
+                   ) : data.advances.map((a: any) => {
+                     const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
+                     const net = a.advance - discount;
+                     return (
+                       <TableRow key={a.month}>
+                         <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
+                         <TableCell className="text-right">{a.centsPerKg}</TableCell>
+                         <TableCell className="text-right text-xs text-muted-foreground">{Number(data.dryKg).toLocaleString('es-CL')} × {a.centsPerKg} ÷ 100</TableCell>
+                         <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
+                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         <TableCell className="text-center">
+                           <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
+                             {a.paid ? 'Pagado' : 'Pendiente'}
+                           </Badge>
+                         </TableCell>
+                       </TableRow>
+                     );
+                   })}
+                   {data.advances.length > 0 && (
+                     <TableRow className="font-bold bg-muted/50">
+                       <TableCell>Total</TableCell>
+                       <TableCell></TableCell>
+                       <TableCell></TableCell>
+                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
+                       <TableCell></TableCell>
+                       <TableCell></TableCell>
+                       <TableCell className="text-center">
+                         <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
+                       </TableCell>
+                     </TableRow>
+                   )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -289,30 +292,36 @@ const ProducerAccount = () => {
             </CardHeader>
             <CardContent>
               {data.nextAdvance ? (
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Mes</TableCell>
-                      <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Anticipo Bruto</TableCell>
-                      <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Descuento Secado</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        {data.dryingDiscountPerMonth > 0 && (data.method === 'descuento_usd' || data.method === 'cuotas')
-                          ? `-USD ${fmt(data.dryingDiscountPerMonth)}`
-                          : '-'}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="bg-muted/50">
-                      <TableCell className="font-bold">Neto a Pagar</TableCell>
-                      <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                 <Table>
+                   <TableBody>
+                     <TableRow>
+                       <TableCell className="font-medium">Mes</TableCell>
+                       <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Cálculo</TableCell>
+                       <TableCell className="text-right text-sm text-muted-foreground">
+                         {Number(data.dryKg).toLocaleString('es-CL')} kg × {data.nextAdvance.centsPerKg} ¢/kg ÷ 100
+                       </TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Anticipo Bruto</TableCell>
+                       <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Descuento Secado</TableCell>
+                       <TableCell className="text-right text-destructive">
+                         {data.dryingDiscountPerMonth > 0 && (data.method === 'descuento_usd' || data.method === 'cuotas')
+                           ? `-USD ${fmt(data.dryingDiscountPerMonth)}`
+                           : '-'}
+                       </TableCell>
+                     </TableRow>
+                     <TableRow className="bg-muted/50">
+                       <TableCell className="font-bold">Neto a Pagar</TableCell>
+                       <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                     </TableRow>
+                   </TableBody>
+                 </Table>
               ) : (
                 <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
               )}
@@ -325,65 +334,101 @@ const ProducerAccount = () => {
               <CardTitle className="text-base">Documento Requerido</CardTitle>
             </CardHeader>
             <CardContent>
-              {data.needsDocument ? (
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Tipo</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="destructive">{data.docType}</Badge>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Monto USD</TableCell>
-                      <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
-                    </TableRow>
-                    {data.nextMonthEx && (
-                      <>
-                        <TableRow>
-                          <TableCell className="font-medium">Tipo de Cambio</TableCell>
-                          <TableCell className="text-right">{data.nextMonthEx.rate}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Monto CLP</TableCell>
-                          <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(data.docNeededUsd * data.nextMonthEx.rate))}</TableCell>
-                        </TableRow>
-                      </>
-                    )}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
-              )}
+              {data.needsDocument ? (() => {
+                 const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '';
+                 const glosa = data.docType === 'Nota de Débito'
+                   ? `Ajuste de precio de anticipo ${nextMonth}`
+                   : `Anticipo compra fruta temporada ${data.year}`;
+                 const montoCLP = data.nextMonthEx ? data.docNeededUsd * data.nextMonthEx.rate : 0;
+                 const iva = montoCLP * 0.19;
+                 return (
+                 <Table>
+                   <TableBody>
+                     <TableRow>
+                       <TableCell className="font-medium">Tipo</TableCell>
+                       <TableCell className="text-right">
+                         <Badge variant="destructive">{data.docType}</Badge>
+                       </TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Glosa</TableCell>
+                       <TableCell className="text-right font-medium">{glosa}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Fecha</TableCell>
+                       <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Monto Neto USD</TableCell>
+                       <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
+                     </TableRow>
+                     {data.nextMonthEx && (
+                       <>
+                         <TableRow>
+                           <TableCell className="font-medium">Tipo de Cambio</TableCell>
+                           <TableCell className="text-right">${data.nextMonthEx.rate}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Monto Neto CLP</TableCell>
+                           <TableCell className="text-right">CLP {fmtClp(montoCLP)}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">IVA (19%)</TableCell>
+                           <TableCell className="text-right">CLP {fmtClp(iva)}</TableCell>
+                         </TableRow>
+                         <TableRow className="bg-muted/50">
+                           <TableCell className="font-bold">Total Documento</TableCell>
+                           <TableCell className="text-right font-bold">CLP {fmtClp(montoCLP + iva)}</TableCell>
+                         </TableRow>
+                       </>
+                     )}
+                     <TableRow>
+                       <TableCell className="font-medium text-muted-foreground text-xs" colSpan={2}>
+                         Cálculo: Anticipos acumulados hasta {nextMonth} (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
+                       </TableCell>
+                     </TableRow>
+                   </TableBody>
+                 </Table>
+                 );
+               })() : (
+                 <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
+               )}
             </CardContent>
           </Card>
 
-          {/* IVA */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Balance IVA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">IVA Secado (nos debe)</p>
-                  <p className="text-lg font-bold">CLP {fmtClp(data.ivaSecado)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IVA Facturado (le debemos)</p>
-                  <p className="text-lg font-bold">CLP {fmtClp(data.ivaProductor)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Saldo IVA</p>
-                  <p className={`text-lg font-bold ${data.ivaSaldo > 0 ? 'text-green-600' : data.ivaSaldo < 0 ? 'text-destructive' : ''}`}>
-                    CLP {fmtClp(data.ivaSaldo)}
-                    {data.ivaSaldo > 0 && <span className="text-sm font-normal ml-1">(a favor)</span>}
-                    {data.ivaSaldo < 0 && <span className="text-sm font-normal ml-1">(a pagar)</span>}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* IVA - desde perspectiva del productor */}
+           <Card className="lg:col-span-2">
+             <CardHeader className="pb-3">
+               <CardTitle className="text-base">Balance IVA <span className="text-sm font-normal text-muted-foreground">(perspectiva del productor)</span></CardTitle>
+             </CardHeader>
+             <CardContent>
+               {(() => {
+                 const ivaAFavor = data.ivaProductor; // producer invoiced us
+                 const ivaEnContra = data.ivaSecado; // drying IVA they owe
+                 const saldo = ivaAFavor - ivaEnContra;
+                 return (
+                 <div className="grid grid-cols-3 gap-4 text-center">
+                   <div>
+                     <p className="text-sm text-muted-foreground">IVA Facturado (a su favor)</p>
+                     <p className="text-lg font-bold">CLP {fmtClp(ivaAFavor)}</p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground">IVA Secado (a favor exportadora)</p>
+                     <p className="text-lg font-bold">CLP {fmtClp(ivaEnContra)}</p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground">Saldo IVA Neto</p>
+                     <p className={`text-lg font-bold ${saldo > 0 ? 'text-green-600' : saldo < 0 ? 'text-destructive' : ''}`}>
+                       CLP {fmtClp(saldo)}
+                       {saldo > 0 && <span className="text-sm font-normal ml-1">(a favor productor)</span>}
+                       {saldo < 0 && <span className="text-sm font-normal ml-1">(a favor exportadora)</span>}
+                     </p>
+                   </div>
+                 </div>
+                 );
+               })()}
+             </CardContent>
+           </Card>
         </div>
       )}
     </div>
