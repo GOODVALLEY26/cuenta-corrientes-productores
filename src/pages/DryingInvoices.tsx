@@ -118,10 +118,11 @@ const DryingInvoices = () => {
       exchange_rate: er,
       amount_usd: amountUsd,
       total_installments: Number(form.total_installments),
+      installment_currency: form.installment_currency,
       date: form.date,
       notes: form.notes || null,
       user_id: user!.id,
-    }).select('id').single();
+    } as any).select('id').single();
 
     if (error) { toast.error(error.message); setUploading(false); return; }
 
