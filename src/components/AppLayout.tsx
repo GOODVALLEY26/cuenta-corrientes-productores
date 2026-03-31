@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Users, BarChart3, FileText, DollarSign, Settings, LogOut, Menu, X,
-  TrendingUp, Receipt, ArrowLeftRight, Percent
+  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen
 } from 'lucide-react';
 
 const navItems = [
