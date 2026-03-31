@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Users, BarChart3, FileText, DollarSign, Settings, LogOut, Menu, X,
-  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen
+  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen, CreditCard
 } from 'lucide-react';
 
 const navItems = [
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/facturas-secado', label: 'Facturas Secado', icon: Receipt },
   { path: '/facturas-productores', label: 'Facturas Productores', icon: FileText },
   { path: '/flujos-pago', label: 'Flujos de Pago', icon: ArrowLeftRight },
+  { path: '/cuotas-secado', label: 'Cuotas Secado', icon: CreditCard },
   { path: '/control-iva', label: 'Control IVA', icon: Percent },
   { path: '/cuenta-corriente', label: 'Cuenta Corriente', icon: BookOpen },
   { path: '/tipo-cambio', label: 'Tipo de Cambio', icon: Settings },
