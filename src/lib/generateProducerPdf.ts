@@ -46,13 +46,13 @@ const methodLabel: Record<string, string> = {
 };
 
 // Colors
-const PRIMARY = [30, 41, 59] as const;       // slate-800
-const HEADER_BG = [30, 41, 59] as const;     // dark header
-const ACCENT_GREEN = [22, 163, 74] as const; // green-600
-const ACCENT_RED = [220, 38, 38] as const;   // red-600
-const MUTED_BG = [241, 245, 249] as const;   // slate-100
-const BORDER = [203, 213, 225] as const;     // slate-300
-const WHITE = [255, 255, 255] as const;
+const PRIMARY: [number, number, number] = [30, 41, 59];
+const HEADER_BG: [number, number, number] = [30, 41, 59];
+const ACCENT_GREEN: [number, number, number] = [22, 163, 74];
+const ACCENT_RED: [number, number, number] = [220, 38, 38];
+const MUTED_BG: [number, number, number] = [241, 245, 249];
+const BORDER: [number, number, number] = [203, 213, 225];
+const WHITE: [number, number, number] = [255, 255, 255];
 
 function drawSectionTitle(doc: jsPDF, title: string, y: number, pageWidth: number): number {
   doc.setFillColor(...PRIMARY);
