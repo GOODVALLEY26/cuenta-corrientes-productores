@@ -26,7 +26,7 @@ const DryingInvoices = () => {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', installment_currency: 'clp', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const load = async () => {
     const [p, i] = await Promise.all([
