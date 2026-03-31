@@ -13,13 +13,12 @@ serve(async (req) => {
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File
-    const invoiceType = formData.get('type') as string || 'drying' // 'drying' or 'producer'
+    const invoiceType = formData.get('type') as string || 'drying'
     
     if (!file) throw new Error('No file provided')
 
     const bytes = new Uint8Array(await file.arrayBuffer())
     
-    // Convert to base64 in chunks to avoid stack overflow
     let binary = ''
     const chunkSize = 8192
     for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -37,23 +36,27 @@ Extrae la siguiente información y devuelve SOLO un JSON válido (sin markdown):
 {
   "producer_name": "nombre del emisor de la factura",
   "invoice_number": "número de folio",
-  "amount_clp": número total en CLP (solo número, sin puntos ni comas),
+  "amount_net_clp": número NETO en CLP (sin IVA, solo número, sin puntos ni comas),
+  "iva_clp": número del IVA en CLP (solo número, sin puntos ni comas),
   "date": "YYYY-MM-DD",
   "exchange_rate": número o null si no aparece tipo de cambio,
   "document_type": "factura" o "nota_debito",
   "notes": "observaciones relevantes o null"
 }
+IMPORTANTE: Separa siempre el monto NETO del IVA. El monto total = neto + IVA.
 Si un campo no se encuentra, usa null.`
       : `Eres un sistema que extrae datos de facturas de secado (servicio de secado de nueces/frutos).
 Extrae la siguiente información y devuelve SOLO un JSON válido (sin markdown):
 {
   "producer_name": "nombre del cliente/productor al que se le cobra el secado",
   "invoice_number": "número de folio",
-  "amount_clp": número total en CLP (solo número, sin puntos ni comas),
+  "amount_net_clp": número NETO en CLP (sin IVA, solo número, sin puntos ni comas),
+  "iva_clp": número del IVA en CLP (solo número, sin puntos ni comas),
   "date": "YYYY-MM-DD",
   "exchange_rate": número o null si no aparece tipo de cambio,
   "notes": "observaciones relevantes o null"
 }
+IMPORTANTE: Separa siempre el monto NETO del IVA. El monto total = neto + IVA.
 Si un campo no se encuentra, usa null.`
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -93,7 +96,6 @@ Si un campo no se encuentra, usa null.`
     try {
       parsed = JSON.parse(content)
     } catch {
-      // Try to extract JSON from markdown code blocks
       const jsonMatch = content?.match(/```(?:json)?\s*([\s\S]*?)```/)
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[1].trim())
