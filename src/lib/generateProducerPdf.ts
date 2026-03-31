@@ -109,7 +109,6 @@ export function generateProducerPdf(data: PdfData) {
     const row: string[] = [
       MONTHS_FULL[a.month - 1],
       `${a.centsPerKg}`,
-      `${Number(data.dryKg).toLocaleString('es-CL')} × ${a.centsPerKg} ÷ 100`,
       `USD ${fmt(a.advance)}`,
     ];
     if (showDiscount) {
