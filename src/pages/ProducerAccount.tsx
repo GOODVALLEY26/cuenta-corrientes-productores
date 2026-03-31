@@ -396,32 +396,39 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* IVA */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Balance IVA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">IVA Secado (nos debe)</p>
-                  <p className="text-lg font-bold">CLP {fmtClp(data.ivaSecado)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IVA Facturado (le debemos)</p>
-                  <p className="text-lg font-bold">CLP {fmtClp(data.ivaProductor)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Saldo IVA</p>
-                  <p className={`text-lg font-bold ${data.ivaSaldo > 0 ? 'text-green-600' : data.ivaSaldo < 0 ? 'text-destructive' : ''}`}>
-                    CLP {fmtClp(data.ivaSaldo)}
-                    {data.ivaSaldo > 0 && <span className="text-sm font-normal ml-1">(a favor)</span>}
-                    {data.ivaSaldo < 0 && <span className="text-sm font-normal ml-1">(a pagar)</span>}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* IVA - desde perspectiva del productor */}
+           <Card className="lg:col-span-2">
+             <CardHeader className="pb-3">
+               <CardTitle className="text-base">Balance IVA <span className="text-sm font-normal text-muted-foreground">(perspectiva del productor)</span></CardTitle>
+             </CardHeader>
+             <CardContent>
+               {(() => {
+                 const ivaAFavor = data.ivaProductor; // producer invoiced us
+                 const ivaEnContra = data.ivaSecado; // drying IVA they owe
+                 const saldo = ivaAFavor - ivaEnContra;
+                 return (
+                 <div className="grid grid-cols-3 gap-4 text-center">
+                   <div>
+                     <p className="text-sm text-muted-foreground">IVA Facturado (a su favor)</p>
+                     <p className="text-lg font-bold">CLP {fmtClp(ivaAFavor)}</p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground">IVA Secado (a favor exportadora)</p>
+                     <p className="text-lg font-bold">CLP {fmtClp(ivaEnContra)}</p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground">Saldo IVA Neto</p>
+                     <p className={`text-lg font-bold ${saldo > 0 ? 'text-green-600' : saldo < 0 ? 'text-destructive' : ''}`}>
+                       CLP {fmtClp(saldo)}
+                       {saldo > 0 && <span className="text-sm font-normal ml-1">(a favor productor)</span>}
+                       {saldo < 0 && <span className="text-sm font-normal ml-1">(a favor exportadora)</span>}
+                     </p>
+                   </div>
+                 </div>
+                 );
+               })()}
+             </CardContent>
+           </Card>
         </div>
       )}
     </div>
