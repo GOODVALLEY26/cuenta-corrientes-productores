@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           month: number
+          paid: boolean
           producer_id: string
           user_id: string
           year: number
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           id?: string
           month: number
+          paid?: boolean
           producer_id: string
           user_id: string
           year: number
@@ -38,6 +40,7 @@ export type Database = {
           created_at?: string
           id?: string
           month?: number
+          paid?: boolean
           producer_id?: string
           user_id?: string
           year?: number

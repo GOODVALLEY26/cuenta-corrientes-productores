@@ -1,0 +1,1 @@
+ALTER TABLE public.advance_rates ADD COLUMN paid boolean NOT NULL DEFAULT false;
