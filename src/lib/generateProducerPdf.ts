@@ -126,7 +126,7 @@ export function generateProducerPdf(data: PdfData) {
   advHeaders.push('Estado');
 
   // Totals row
-  const totalRow: string[] = ['TOTAL', '', '', `USD ${fmt(data.totalAdvances)}`];
+  const totalRow: string[] = ['TOTAL', '', `USD ${fmt(data.totalAdvances)}`];
   if (showDiscount) {
     totalRow.push('', '');
   }
