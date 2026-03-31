@@ -100,6 +100,7 @@ export type Database = {
           file_path: string | null
           id: string
           invoice_number: string | null
+          iva_clp: number | null
           notes: string | null
           paid_installments: number | null
           producer_id: string
@@ -117,6 +118,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           invoice_number?: string | null
+          iva_clp?: number | null
           notes?: string | null
           paid_installments?: number | null
           producer_id: string
@@ -134,6 +136,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           invoice_number?: string | null
+          iva_clp?: number | null
           notes?: string | null
           paid_installments?: number | null
           producer_id?: string
@@ -261,6 +264,7 @@ export type Database = {
           file_path: string | null
           id: string
           invoice_number: string | null
+          iva_clp: number | null
           notes: string | null
           producer_id: string
           updated_at: string
@@ -276,6 +280,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           invoice_number?: string | null
+          iva_clp?: number | null
           notes?: string | null
           producer_id: string
           updated_at?: string
@@ -291,6 +296,7 @@ export type Database = {
           file_path?: string | null
           id?: string
           invoice_number?: string | null
+          iva_clp?: number | null
           notes?: string | null
           producer_id?: string
           updated_at?: string
