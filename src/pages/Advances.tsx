@@ -3,154 +3,279 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 type Producer = { id: string; name: string };
-type AdvanceRate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; producers?: { name: string } };
+type Rate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; paid: boolean };
 type DryKg = { producer_id: string; dry_kg: number };
 
 const Advances = () => {
   const { user } = useAuth();
   const [producers, setProducers] = useState<Producer[]>([]);
-  const [rates, setRates] = useState<AdvanceRate[]>([]);
+  const [rates, setRates] = useState<Rate[]>([]);
   const [dryKgs, setDryKgs] = useState<DryKg[]>([]);
-  const [open, setOpen] = useState(false);
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
-  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
-  const [form, setForm] = useState({ producer_id: '', cents_per_kg: '' });
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const load = async () => {
     const [p, r, k] = await Promise.all([
       supabase.from('producers').select('id, name').order('name'),
-      supabase.from('advance_rates').select('*, producers(name)').eq('year', filterYear).eq('month', filterMonth).order('created_at'),
+      supabase.from('advance_rates').select('*').eq('year', filterYear),
       supabase.from('dry_kg_reports').select('producer_id, dry_kg'),
     ]);
     if (p.data) setProducers(p.data);
-    if (r.data) setRates(r.data as any);
+    if (r.data) setRates(r.data as Rate[]);
     if (k.data) setDryKgs(k.data);
   };
 
-  useEffect(() => { if (user) load(); }, [user, filterYear, filterMonth]);
+  useEffect(() => { if (user) load(); }, [user, filterYear]);
 
-  const getKg = (producerId: string) => dryKgs.find(d => d.producer_id === producerId)?.dry_kg ?? 0;
+  const getKg = (pid: string) => dryKgs.find(d => d.producer_id === pid)?.dry_kg ?? 0;
+  const getRate = (pid: string, month: number) => rates.find(r => r.producer_id === pid && r.month === month);
 
-  const save = async () => {
-    if (!form.producer_id || !form.cents_per_kg) { toast.error('Completa todos los campos'); return; }
-    const { error } = await supabase.from('advance_rates').upsert({
-      producer_id: form.producer_id,
-      month: filterMonth,
-      year: filterYear,
-      cents_per_kg: Number(form.cents_per_kg),
-      user_id: user!.id,
-    }, { onConflict: 'producer_id,month,year' });
-    if (error) { toast.error(error.message); return; }
-    toast.success('Tasa guardada');
-    setOpen(false);
+  const cellKey = (pid: string, month: number) => `${pid}-${month}`;
+
+  const saveCell = async (pid: string, month: number) => {
+    const val = parseFloat(editValue);
+    if (isNaN(val) && editValue !== '') { toast.error('Valor inválido'); return; }
+
+    if (editValue === '' || val === 0) {
+      const existing = getRate(pid, month);
+      if (existing) {
+        await supabase.from('advance_rates').delete().eq('id', existing.id);
+      }
+    } else {
+      await supabase.from('advance_rates').upsert({
+        producer_id: pid,
+        month,
+        year: filterYear,
+        cents_per_kg: val,
+        user_id: user!.id,
+      }, { onConflict: 'producer_id,month,year' });
+    }
+    setEditingCell(null);
     load();
   };
 
-  const remove = async (id: string) => {
-    if (!confirm('¿Eliminar?')) return;
-    await supabase.from('advance_rates').delete().eq('id', id);
+  const togglePaid = async (pid: string, month: number) => {
+    const rate = getRate(pid, month);
+    if (!rate) return;
+    await supabase.from('advance_rates').update({ paid: !rate.paid }).eq('id', rate.id);
     load();
   };
+
+  const getAdvance = (pid: string, month: number) => {
+    const rate = getRate(pid, month);
+    if (!rate) return 0;
+    return (getKg(pid) * rate.cents_per_kg) / 100;
+  };
+
+  // Summary calculations
+  const monthTotals = MONTHS.map((_, i) => {
+    const month = i + 1;
+    const total = producers.reduce((sum, p) => sum + getAdvance(p.id, month), 0);
+    const paid = producers.reduce((sum, p) => {
+      const rate = getRate(p.id, month);
+      return sum + (rate?.paid ? getAdvance(p.id, month) : 0);
+    }, 0);
+    return { total, paid, pending: total - paid };
+  });
+
+  const grandTotal = monthTotals.reduce((s, m) => s + m.total, 0);
+  const grandPaid = monthTotals.reduce((s, m) => s + m.paid, 0);
+  const grandPending = monthTotals.reduce((s, m) => s + m.pending, 0);
+
+  const fmt = (n: number) => n > 0 ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Anticipos</h1>
-          <p className="text-muted-foreground">Centavos por kilo por productor y mes. Anticipo = Kg totales × ¢/kg / 100</p>
+          <p className="text-muted-foreground">Ingresa ¢/kg por productor y mes. Anticipo = Kg × ¢/kg ÷ 100</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={String(filterMonth)} onValueChange={v => setFilterMonth(Number(v))}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent>{MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
-          </Select>
-          <Select value={String(filterYear)} onValueChange={v => setFilterYear(Number(v))}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>{[2024,2025,2026,2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
-          </Select>
-          <Button onClick={() => { setForm({ producer_id: '', cents_per_kg: '' }); setOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />Agregar
-          </Button>
-        </div>
+        <Select value={String(filterYear)} onValueChange={v => setFilterYear(Number(v))}>
+          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+          <SelectContent>{[2024,2025,2026,2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+        </Select>
       </div>
 
+      {/* Grid de centavos por mes */}
       <Card>
-        <CardContent className="p-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Centavos por Kilo (¢/kg)</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Productor</TableHead>
-                <TableHead className="text-right">Kg Secos (total)</TableHead>
-                <TableHead className="text-right">¢/kg</TableHead>
-                <TableHead className="text-right">Anticipo USD</TableHead>
-                <TableHead className="w-16"></TableHead>
+                <TableHead className="sticky left-0 bg-card z-10 min-w-[140px]">Productor</TableHead>
+                <TableHead className="text-right min-w-[80px]">Kg Secos</TableHead>
+                {MONTHS.map((m, i) => (
+                  <TableHead key={i} className="text-center min-w-[80px]">{m}</TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rates.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin tasas para {MONTHS[filterMonth - 1]} {filterYear}</TableCell></TableRow>
-              ) : rates.map(r => {
-                const kg = getKg(r.producer_id);
-                const advance = (kg * Number(r.cents_per_kg)) / 100;
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{(r as any).producers?.name}</TableCell>
-                    <TableCell className="text-right">{Number(kg).toLocaleString('es-CL')}</TableCell>
-                    <TableCell className="text-right">{Number(r.cents_per_kg).toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-semibold">USD {advance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
-                  </TableRow>
-                );
-              })}
-              {rates.length > 0 && (
-                <TableRow className="font-bold bg-muted/50">
-                  <TableCell>Total</TableCell>
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell className="text-right">
-                    USD {rates.reduce((s, r) => s + (getKg(r.producer_id) * Number(r.cents_per_kg)) / 100, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell></TableCell>
+              {producers.map(p => (
+                <TableRow key={p.id}>
+                  <TableCell className="sticky left-0 bg-card z-10 font-medium">{p.name}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{Number(getKg(p.id)).toLocaleString('es-CL')}</TableCell>
+                  {MONTHS.map((_, i) => {
+                    const month = i + 1;
+                    const key = cellKey(p.id, month);
+                    const rate = getRate(p.id, month);
+                    const isEditing = editingCell === key;
+
+                    return (
+                      <TableCell key={i} className="text-center p-1">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="h-8 w-16 text-center mx-auto text-sm"
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onBlur={() => saveCell(p.id, month)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveCell(p.id, month); if (e.key === 'Escape') setEditingCell(null); }}
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            className="w-full h-8 text-sm hover:bg-accent rounded transition-colors flex items-center justify-center gap-1"
+                            onClick={() => { setEditingCell(key); setEditValue(rate ? String(rate.cents_per_kg) : ''); }}
+                          >
+                            {rate ? (
+                              <>
+                                <span className={rate.paid ? 'text-green-600 font-medium' : ''}>{rate.cents_per_kg}</span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground/40">—</span>
+                            )}
+                          </button>
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Tasa de Anticipo - {MONTHS[filterMonth - 1]} {filterYear}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Productor</Label>
-              <Select value={form.producer_id} onValueChange={v => setForm({ ...form, producer_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                <SelectContent>{producers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Centavos por Kilo (¢/kg)</Label>
-              <Input type="number" step="0.01" value={form.cents_per_kg} onChange={e => setForm({ ...form, cents_per_kg: e.target.value })} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={save}>Guardar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Anticipo USD por mes */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Anticipo USD por Mes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="sticky left-0 bg-card z-10 min-w-[140px]">Productor</TableHead>
+                {MONTHS.map((m, i) => (
+                  <TableHead key={i} className="text-center min-w-[100px]">{m}</TableHead>
+                ))}
+                <TableHead className="text-right min-w-[100px]">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {producers.filter(p => MONTHS.some((_, i) => getRate(p.id, i + 1))).map(p => {
+                const total = MONTHS.reduce((s, _, i) => s + getAdvance(p.id, i + 1), 0);
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell className="sticky left-0 bg-card z-10 font-medium">{p.name}</TableCell>
+                    {MONTHS.map((_, i) => {
+                      const month = i + 1;
+                      const adv = getAdvance(p.id, month);
+                      const rate = getRate(p.id, month);
+                      return (
+                        <TableCell key={i} className="text-center p-1">
+                          {adv > 0 ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className={`text-sm ${rate?.paid ? 'text-green-600 line-through' : 'font-medium'}`}>
+                                {fmt(adv)}
+                              </span>
+                              <Checkbox
+                                checked={rate?.paid ?? false}
+                                onCheckedChange={() => togglePaid(p.id, month)}
+                                className="h-3.5 w-3.5"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="text-right font-bold">{fmt(total)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              {/* Totals row */}
+              <TableRow className="font-bold bg-muted/50">
+                <TableCell className="sticky left-0 bg-muted/50 z-10">Total</TableCell>
+                {monthTotals.map((m, i) => (
+                  <TableCell key={i} className="text-center">{fmt(m.total)}</TableCell>
+                ))}
+                <TableCell className="text-right">{fmt(grandTotal)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Resumen de pagos */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Resumen de Pagos {filterYear}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="sticky left-0 bg-card z-10">Concepto</TableHead>
+                {MONTHS.map((m, i) => (
+                  <TableHead key={i} className="text-center min-w-[100px]">{m}</TableHead>
+                ))}
+                <TableHead className="text-right min-w-[100px]">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell className="sticky left-0 bg-card z-10 font-medium">A pagar</TableCell>
+                {monthTotals.map((m, i) => (
+                  <TableCell key={i} className="text-center text-sm">{fmt(m.total)}</TableCell>
+                ))}
+                <TableCell className="text-right font-bold">{fmt(grandTotal)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="sticky left-0 bg-card z-10 font-medium text-green-600">Pagado</TableCell>
+                {monthTotals.map((m, i) => (
+                  <TableCell key={i} className="text-center text-sm text-green-600">{fmt(m.paid)}</TableCell>
+                ))}
+                <TableCell className="text-right font-bold text-green-600">{fmt(grandPaid)}</TableCell>
+              </TableRow>
+              <TableRow className="bg-muted/50">
+                <TableCell className="sticky left-0 bg-muted/50 z-10 font-bold">Pendiente</TableCell>
+                {monthTotals.map((m, i) => (
+                  <TableCell key={i} className="text-center font-bold text-sm">{fmt(m.pending)}</TableCell>
+                ))}
+                <TableCell className="text-right font-bold">{fmt(grandPending)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
