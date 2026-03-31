@@ -26,7 +26,7 @@ const DryingInvoices = () => {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', installment_currency: 'clp', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const load = async () => {
     const [p, i] = await Promise.all([
@@ -118,10 +118,11 @@ const DryingInvoices = () => {
       exchange_rate: er,
       amount_usd: amountUsd,
       total_installments: Number(form.total_installments),
+      installment_currency: form.installment_currency,
       date: form.date,
       notes: form.notes || null,
       user_id: user!.id,
-    }).select('id').single();
+    } as any).select('id').single();
 
     if (error) { toast.error(error.message); setUploading(false); return; }
 
@@ -177,7 +178,7 @@ const DryingInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
           <p className="text-muted-foreground">Sube el PDF y el sistema lee Neto + IVA automáticamente</p>
         </div>
-        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
+        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', installment_currency: 'clp', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />Agregar
         </Button>
       </div>
@@ -297,6 +298,16 @@ const DryingInvoices = () => {
               <div className="space-y-2">
                 <Label>Cuotas</Label>
                 <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Moneda Cuotas</Label>
+                <Select value={form.installment_currency} onValueChange={v => setForm({ ...form, installment_currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clp">CLP</SelectItem>
+                    <SelectItem value="usd">USD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {form.amount_clp && form.exchange_rate && (

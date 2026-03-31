@@ -13,6 +13,7 @@ import Advances from "@/pages/Advances";
 import DryingInvoices from "@/pages/DryingInvoices";
 import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
+import InstallmentPayments from "@/pages/InstallmentPayments";
 import IvaTracking from "@/pages/IvaTracking";
 import ExchangeRate from "@/pages/ExchangeRate";
 import ProducerAccount from "@/pages/ProducerAccount";
@@ -43,6 +44,7 @@ const ProtectedRoutes = () => {
         <Route path="/facturas-secado" element={<DryingInvoices />} />
         <Route path="/facturas-productores" element={<ProducerInvoices />} />
         <Route path="/flujos-pago" element={<PaymentFlows />} />
+        <Route path="/cuotas-secado" element={<InstallmentPayments />} />
         <Route path="/control-iva" element={<IvaTracking />} />
         <Route path="/cuenta-corriente" element={<ProducerAccount />} />
         <Route path="/tipo-cambio" element={<ExchangeRate />} />

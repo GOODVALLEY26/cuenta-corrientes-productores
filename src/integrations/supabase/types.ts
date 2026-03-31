@@ -102,6 +102,7 @@ export type Database = {
           exchange_rate: number | null
           file_path: string | null
           id: string
+          installment_currency: string
           invoice_number: string | null
           iva_clp: number | null
           notes: string | null
@@ -120,6 +121,7 @@ export type Database = {
           exchange_rate?: number | null
           file_path?: string | null
           id?: string
+          installment_currency?: string
           invoice_number?: string | null
           iva_clp?: number | null
           notes?: string | null
@@ -138,6 +140,7 @@ export type Database = {
           exchange_rate?: number | null
           file_path?: string | null
           id?: string
+          installment_currency?: string
           invoice_number?: string | null
           iva_clp?: number | null
           notes?: string | null
@@ -184,6 +187,72 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      installment_payments: {
+        Row: {
+          amount_clp: number
+          amount_usd: number | null
+          created_at: string
+          drying_invoice_id: string
+          exchange_rate: number | null
+          id: string
+          installment_number: number
+          month: number | null
+          paid: boolean
+          paid_date: string | null
+          producer_id: string
+          updated_at: string
+          user_id: string
+          year: number | null
+        }
+        Insert: {
+          amount_clp?: number
+          amount_usd?: number | null
+          created_at?: string
+          drying_invoice_id: string
+          exchange_rate?: number | null
+          id?: string
+          installment_number: number
+          month?: number | null
+          paid?: boolean
+          paid_date?: string | null
+          producer_id: string
+          updated_at?: string
+          user_id: string
+          year?: number | null
+        }
+        Update: {
+          amount_clp?: number
+          amount_usd?: number | null
+          created_at?: string
+          drying_invoice_id?: string
+          exchange_rate?: number | null
+          id?: string
+          installment_number?: number
+          month?: number | null
+          paid?: boolean
+          paid_date?: string | null
+          producer_id?: string
+          updated_at?: string
+          user_id?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_payments_drying_invoice_id_fkey"
+            columns: ["drying_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "drying_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_payments_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_flows: {
         Row: {

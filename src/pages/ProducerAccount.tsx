@@ -33,12 +33,13 @@ const ProducerAccount = () => {
   }, [selectedId, year, user]);
 
   const loadData = async () => {
-    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes] = await Promise.all([
+    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes] = await Promise.all([
       supabase.from('advance_rates').select('*').eq('producer_id', selectedId).eq('year', year),
       supabase.from('dry_kg_reports').select('dry_kg').eq('producer_id', selectedId),
       supabase.from('producer_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('drying_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('exchange_rates').select('*').eq('year', year),
+      supabase.from('installment_payments').select('*').eq('producer_id', selectedId).eq('year', year).order('installment_number'),
     ]);
 
     const rates = ratesRes.data ?? [];
@@ -46,6 +47,7 @@ const ProducerAccount = () => {
     const prodInvoices = prodInvRes.data ?? [];
     const dryInvoices = dryInvRes.data ?? [];
     const exRates = exRatesRes.data ?? [];
+    const installmentPayments = instPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
     // Total facturado por productor (facturas + notas de débito)
@@ -68,10 +70,39 @@ const ProducerAccount = () => {
     const totalDryingUsd = dryInvoices.reduce((s, i) => s + Number(i.amount_usd ?? 0), 0);
     const totalDryingClp = dryInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
-    // Drying discount per month (for cuotas/descuento)
-    let dryingDiscountPerMonth = 0;
+    // Cuota logic for 'cuotas' method
     const method = producer.drying_payment_method;
-    if (method === 'descuento_usd' || method === 'cuotas') {
+    let dryingDiscountPerMonth = 0;
+    let cuotaClp = 0;
+    let cuotaTotalPaidClp = 0;
+    let cuotaTotalPaidUsd = 0;
+    let cuotaSaldoClp = 0;
+    let cuotaDetails: any[] = [];
+
+    if (method === 'cuotas') {
+      const numInstallments = advances.length + 1;
+      cuotaClp = totalDryingClp / numInstallments;
+
+      // Use installment_payments if available
+      cuotaDetails = installmentPayments;
+      cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+      cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
+      cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
+
+      // For the advance table, find the current month's installment
+      if (nextAdvance) {
+        const nextInst = installmentPayments.find((p: any) => p.month === nextAdvance.month);
+        if (nextInst && nextInst.exchange_rate) {
+          dryingDiscountPerMonth = Number(nextInst.amount_clp) / Number(nextInst.exchange_rate);
+        } else {
+          // Use last known exchange rate
+          const lastExRate = exRates.find(e => e.month === nextAdvance.month);
+          if (lastExRate) {
+            dryingDiscountPerMonth = cuotaClp / Number(lastExRate.rate);
+          }
+        }
+      }
+    } else if (method === 'descuento_usd') {
       for (const inv of dryInvoices) {
         const installments = inv.total_installments ?? 1;
         if (installments > 0 && inv.amount_usd) {
@@ -128,6 +159,11 @@ const ProducerAccount = () => {
       ivaSecado,
       ivaProductor,
       producer,
+      cuotaClp,
+      cuotaTotalPaidClp,
+      cuotaTotalPaidUsd,
+      cuotaSaldoClp,
+      cuotaDetails,
     });
   };
 
@@ -207,21 +243,51 @@ const ProducerAccount = () => {
               <Table>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">Total Secado USD</TableCell>
-                    <TableCell className="text-right">USD {fmt(data.totalDryingUsd)}</TableCell>
-                  </TableRow>
-                  <TableRow>
                     <TableCell className="font-medium">Total Secado CLP</TableCell>
-                    <TableCell className="text-right">CLP {fmtClp(data.totalDryingClp)}</TableCell>
+                    <TableCell className="text-right font-bold">CLP {fmtClp(data.totalDryingClp)}</TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Descuento mensual</TableCell>
-                    <TableCell className="text-right">
-                      {data.method === 'descuento_usd' || data.method === 'cuotas'
-                        ? `USD ${fmt(data.dryingDiscountPerMonth)}`
-                        : <span className="text-muted-foreground">No aplica</span>}
-                    </TableCell>
-                  </TableRow>
+                  {data.totalDryingUsd > 0 && (
+                    <TableRow>
+                      <TableCell className="font-medium">Total Secado USD</TableCell>
+                      <TableCell className="text-right">USD {fmt(data.totalDryingUsd)}</TableCell>
+                    </TableRow>
+                  )}
+                  {data.method === 'cuotas' && (
+                    <>
+                      <TableRow>
+                        <TableCell className="font-medium">Cuota mensual CLP</TableCell>
+                        <TableCell className="text-right">CLP {fmtClp(data.cuotaClp)} ({data.advances.length}+1 cuotas)</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium text-green-700">Total Pagado CLP</TableCell>
+                        <TableCell className="text-right text-green-700 font-bold">CLP {fmtClp(data.cuotaTotalPaidClp)}</TableCell>
+                      </TableRow>
+                      {data.cuotaTotalPaidUsd > 0 && (
+                        <TableRow>
+                          <TableCell className="font-medium text-green-700">Total Pagado USD</TableCell>
+                          <TableCell className="text-right text-green-700">USD {fmt(data.cuotaTotalPaidUsd)}</TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow className="bg-muted/50">
+                        <TableCell className="font-bold">Saldo CLP</TableCell>
+                        <TableCell className={`text-right font-bold ${data.cuotaSaldoClp > 0 ? 'text-destructive' : 'text-green-700'}`}>
+                          CLP {fmtClp(data.cuotaSaldoClp)}
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                  {data.method === 'descuento_usd' && (
+                    <TableRow>
+                      <TableCell className="font-medium">Descuento mensual</TableCell>
+                      <TableCell className="text-right">USD {fmt(data.dryingDiscountPerMonth)}</TableCell>
+                    </TableRow>
+                  )}
+                  {data.method !== 'descuento_usd' && data.method !== 'cuotas' && (
+                    <TableRow>
+                      <TableCell className="font-medium">Descuento mensual</TableCell>
+                      <TableCell className="text-right text-muted-foreground">No aplica</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
