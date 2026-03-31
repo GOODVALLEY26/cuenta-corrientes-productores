@@ -292,30 +292,36 @@ const ProducerAccount = () => {
             </CardHeader>
             <CardContent>
               {data.nextAdvance ? (
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Mes</TableCell>
-                      <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Anticipo Bruto</TableCell>
-                      <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Descuento Secado</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        {data.dryingDiscountPerMonth > 0 && (data.method === 'descuento_usd' || data.method === 'cuotas')
-                          ? `-USD ${fmt(data.dryingDiscountPerMonth)}`
-                          : '-'}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="bg-muted/50">
-                      <TableCell className="font-bold">Neto a Pagar</TableCell>
-                      <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                 <Table>
+                   <TableBody>
+                     <TableRow>
+                       <TableCell className="font-medium">Mes</TableCell>
+                       <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Cálculo</TableCell>
+                       <TableCell className="text-right text-sm text-muted-foreground">
+                         {Number(data.dryKg).toLocaleString('es-CL')} kg × {data.nextAdvance.centsPerKg} ¢/kg ÷ 100
+                       </TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Anticipo Bruto</TableCell>
+                       <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Descuento Secado</TableCell>
+                       <TableCell className="text-right text-destructive">
+                         {data.dryingDiscountPerMonth > 0 && (data.method === 'descuento_usd' || data.method === 'cuotas')
+                           ? `-USD ${fmt(data.dryingDiscountPerMonth)}`
+                           : '-'}
+                       </TableCell>
+                     </TableRow>
+                     <TableRow className="bg-muted/50">
+                       <TableCell className="font-bold">Neto a Pagar</TableCell>
+                       <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                     </TableRow>
+                   </TableBody>
+                 </Table>
               ) : (
                 <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
               )}
