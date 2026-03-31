@@ -148,6 +148,11 @@ const ProducerAccount = () => {
           <p className="text-muted-foreground">Resumen completo de la relación comercial con cada productor</p>
         </div>
         <div className="flex gap-2">
+          {data && (
+            <Button variant="outline" onClick={() => generateProducerPdf(data)}>
+              <Download className="h-4 w-4 mr-1" /> Descargar PDF
+            </Button>
+          )}
           <Select value={selectedId} onValueChange={setSelectedId}>
             <SelectTrigger className="w-52"><SelectValue placeholder="Seleccionar productor..." /></SelectTrigger>
             <SelectContent>{producers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
