@@ -14,7 +14,331 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      advance_rates: {
+        Row: {
+          cents_per_kg: number
+          created_at: string
+          id: string
+          month: number
+          producer_id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          cents_per_kg: number
+          created_at?: string
+          id?: string
+          month: number
+          producer_id: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          cents_per_kg?: number
+          created_at?: string
+          id?: string
+          month?: number
+          producer_id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advance_rates_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dry_kg_reports: {
+        Row: {
+          created_at: string
+          dry_kg: number
+          id: string
+          month: number
+          producer_id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          dry_kg: number
+          id?: string
+          month: number
+          producer_id: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          dry_kg?: number
+          id?: string
+          month?: number
+          producer_id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dry_kg_reports_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drying_invoices: {
+        Row: {
+          amount_clp: number
+          amount_usd: number | null
+          created_at: string
+          date: string
+          exchange_rate: number | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          paid_installments: number | null
+          producer_id: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          total_installments: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_clp: number
+          amount_usd?: number | null
+          created_at?: string
+          date: string
+          exchange_rate?: number | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_installments?: number | null
+          producer_id: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_installments?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_clp?: number
+          amount_usd?: number | null
+          created_at?: string
+          date?: string
+          exchange_rate?: number | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          paid_installments?: number | null
+          producer_id?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          total_installments?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drying_invoices_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exchange_rates: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          rate: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          rate: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          rate?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      payment_flows: {
+        Row: {
+          advance_usd: number | null
+          created_at: string
+          document_amount_usd: number | null
+          document_type_needed:
+            | Database["public"]["Enums"]["document_type"]
+            | null
+          drying_discount_usd: number | null
+          id: string
+          month: number
+          net_payment_usd: number | null
+          notes: string | null
+          producer_id: string
+          producer_invoiced_usd: number | null
+          requires_document: boolean | null
+          status: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          advance_usd?: number | null
+          created_at?: string
+          document_amount_usd?: number | null
+          document_type_needed?:
+            | Database["public"]["Enums"]["document_type"]
+            | null
+          drying_discount_usd?: number | null
+          id?: string
+          month: number
+          net_payment_usd?: number | null
+          notes?: string | null
+          producer_id: string
+          producer_invoiced_usd?: number | null
+          requires_document?: boolean | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          advance_usd?: number | null
+          created_at?: string
+          document_amount_usd?: number | null
+          document_type_needed?:
+            | Database["public"]["Enums"]["document_type"]
+            | null
+          drying_discount_usd?: number | null
+          id?: string
+          month?: number
+          net_payment_usd?: number | null
+          notes?: string | null
+          producer_id?: string
+          producer_invoiced_usd?: number | null
+          requires_document?: boolean | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_flows_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producer_invoices: {
+        Row: {
+          amount_clp: number
+          amount_usd: number
+          created_at: string
+          date: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          exchange_rate: number
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          producer_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_clp: number
+          amount_usd: number
+          created_at?: string
+          date: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          exchange_rate: number
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          producer_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_clp?: number
+          amount_usd?: number
+          created_at?: string
+          date?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          exchange_rate?: number
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          producer_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producer_invoices_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producers: {
+        Row: {
+          created_at: string
+          drying_payment_method: Database["public"]["Enums"]["drying_payment_method"]
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          rut: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drying_payment_method?: Database["public"]["Enums"]["drying_payment_method"]
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          rut?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drying_payment_method?: Database["public"]["Enums"]["drying_payment_method"]
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          rut?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +347,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      document_type: "factura" | "nota_debito"
+      drying_payment_method:
+        | "descuento_usd"
+        | "pago_clp"
+        | "liquidacion_fin_año"
+        | "cuotas"
+      invoice_status: "pendiente" | "pagada" | "parcial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +480,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      document_type: ["factura", "nota_debito"],
+      drying_payment_method: [
+        "descuento_usd",
+        "pago_clp",
+        "liquidacion_fin_año",
+        "cuotas",
+      ],
+      invoice_status: ["pendiente", "pagada", "parcial"],
+    },
   },
 } as const
