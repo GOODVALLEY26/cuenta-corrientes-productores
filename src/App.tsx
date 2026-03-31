@@ -13,6 +13,7 @@ import Advances from "@/pages/Advances";
 import DryingInvoices from "@/pages/DryingInvoices";
 import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
+import IvaTracking from "@/pages/IvaTracking";
 import ExchangeRate from "@/pages/ExchangeRate";
 import NotFound from "@/pages/NotFound";
 
