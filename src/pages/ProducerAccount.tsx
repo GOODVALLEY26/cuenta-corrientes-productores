@@ -72,55 +72,63 @@ const ProducerAccount = () => {
 
     // Cuota logic for 'cuotas' method
     const method = producer.drying_payment_method;
-    let dryingDiscountPerMonth = 0;
     let cuotaClp = 0;
     let cuotaTotalPaidClp = 0;
     let cuotaTotalPaidUsd = 0;
     let cuotaSaldoClp = 0;
     let cuotaDetails: any[] = [];
 
+    // Fallback exchange rate: last producer invoice's exchange_rate
+    const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
+
+    // Build per-month discount map for cuotas
+    const discountByMonth: Record<number, number> = {};
+
     if (method === 'cuotas') {
       const numInstallments = advances.length + 1;
       cuotaClp = totalDryingClp / numInstallments;
 
-      // Use installment_payments if available
       cuotaDetails = installmentPayments;
       cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
       cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
       cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
 
-      // For the advance table, find the current month's installment
-      if (nextAdvance) {
-        const nextInst = installmentPayments.find((p: any) => p.month === nextAdvance.month);
-        if (nextInst && nextInst.exchange_rate) {
-          dryingDiscountPerMonth = Number(nextInst.amount_clp) / Number(nextInst.exchange_rate);
+      // For each advance, find the corresponding installment's USD amount
+      for (const adv of advances) {
+        const inst = installmentPayments.find((p: any) => p.month === adv.month);
+        if (inst && inst.amount_usd) {
+          discountByMonth[adv.month] = Number(inst.amount_usd);
         } else {
-          // Use last known exchange rate
-          const lastExRate = exRates.find(e => e.month === nextAdvance.month);
-          if (lastExRate) {
-            dryingDiscountPerMonth = cuotaClp / Number(lastExRate.rate);
-          }
+          // Use exchange rate for that month, or fallback to last invoice TC
+          const monthEx = exRates.find(e => e.month === adv.month);
+          const tc = monthEx ? Number(monthEx.rate) : fallbackExRate;
+          discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
         }
       }
     } else if (method === 'descuento_usd') {
-      for (const inv of dryInvoices) {
+      const discountTotal = dryInvoices.reduce((s, inv) => {
         const installments = inv.total_installments ?? 1;
         if (installments > 0 && inv.amount_usd) {
-          dryingDiscountPerMonth += Number(inv.amount_usd) / installments;
+          return s + Number(inv.amount_usd) / installments;
         }
+        return s;
+      }, 0);
+      for (const adv of advances) {
+        discountByMonth[adv.month] = discountTotal;
       }
     }
 
     // Next payment detail
     const nextPaymentGross = nextAdvance?.advance ?? 0;
-    const nextPaymentNet = nextPaymentGross - (method === 'descuento_usd' || method === 'cuotas' ? dryingDiscountPerMonth : 0);
+    const nextDiscount = nextAdvance ? (discountByMonth[nextAdvance.month] ?? 0) : 0;
+    const nextPaymentNet = nextPaymentGross - nextDiscount;
 
     // Nota de débito needed?
     const alreadyInvoiced = totalInvoicedUsd;
     const needsDocument = nextPaymentGross > 0 && alreadyInvoiced < totalAdvances;
     const hasInitialInvoice = prodInvoices.some(i => i.document_type === 'factura');
     const docType = hasInitialInvoice ? 'Nota de Débito' : 'Factura';
-    const docAmountUsd = Math.max(0, (nextAdvance?.advance ?? 0) - 0); // Next advance to cover
 
     // Calculate how much more needs to be invoiced
     const cumulativeAdvancesToNext = advances
@@ -128,8 +136,9 @@ const ProducerAccount = () => {
       .reduce((s, a) => s + a.advance, 0);
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
-    // Exchange rate for next month
+    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
     const nextMonthEx = exRates.find(e => e.month === (nextAdvance?.month ?? 0));
+    const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
 
     // IVA balance
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
