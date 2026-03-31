@@ -238,7 +238,6 @@ const ProducerAccount = () => {
                   <TableRow>
                      <TableHead>Mes</TableHead>
                      <TableHead className="text-right">¢/kg</TableHead>
-                     <TableHead className="text-right">Cálculo</TableHead>
                      <TableHead className="text-right">Anticipo USD</TableHead>
                      <TableHead className="text-right">Desc. Secado</TableHead>
                      <TableHead className="text-right">Neto a Pagar</TableHead>
