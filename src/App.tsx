@@ -15,6 +15,7 @@ import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
 import IvaTracking from "@/pages/IvaTracking";
 import ExchangeRate from "@/pages/ExchangeRate";
+import ProducerAccount from "@/pages/ProducerAccount";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
