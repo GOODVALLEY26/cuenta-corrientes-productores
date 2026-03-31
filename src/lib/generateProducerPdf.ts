@@ -250,7 +250,7 @@ export function generateProducerPdf(data: PdfData) {
       docRows.push(['Total Documento', `CLP ${fmtClp(montoCLP + iva)}`]);
     }
 
-    docRows.push(['Cálculo', `Anticipos acumulados hasta ${nextMonth} (USD ${fmt(data.docNeededUsd + data.totalInvoicedUsd)}) - Ya facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`]);
+    
 
     autoTable(doc, {
       startY: y,
