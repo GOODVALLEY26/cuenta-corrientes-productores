@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Producer = { id: string; name: string };
@@ -22,6 +22,9 @@ const DryingInvoices = () => {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const load = async () => {
@@ -35,13 +38,28 @@ const DryingInvoices = () => {
 
   useEffect(() => { if (user) load(); }, [user]);
 
+  const uploadPdf = async (invoiceId: string): Promise<string | null> => {
+    if (!pdfFile || !user) return null;
+    const filePath = `${user.id}/${invoiceId}_${pdfFile.name}`;
+    const { error } = await supabase.storage.from('drying-invoices-files').upload(filePath, pdfFile, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+    if (error) {
+      toast.error('Error subiendo PDF: ' + error.message);
+      return null;
+    }
+    return filePath;
+  };
+
   const save = async () => {
     if (!form.producer_id || !form.amount_clp) { toast.error('Completa los campos requeridos'); return; }
+    setUploading(true);
     const amountClp = Number(form.amount_clp);
     const er = form.exchange_rate ? Number(form.exchange_rate) : null;
     const amountUsd = er ? amountClp / er : null;
 
-    const { error } = await supabase.from('drying_invoices').insert({
+    const { data, error } = await supabase.from('drying_invoices').insert({
       producer_id: form.producer_id,
       invoice_number: form.invoice_number || null,
       amount_clp: amountClp,
@@ -51,17 +69,59 @@ const DryingInvoices = () => {
       date: form.date,
       notes: form.notes || null,
       user_id: user!.id,
-    });
-    if (error) { toast.error(error.message); return; }
+    }).select('id').single();
+
+    if (error) { toast.error(error.message); setUploading(false); return; }
+
+    // Upload PDF if selected
+    if (pdfFile && data) {
+      const filePath = await uploadPdf(data.id);
+      if (filePath) {
+        await supabase.from('drying_invoices').update({ file_path: filePath } as any).eq('id', data.id);
+      }
+    }
+
     toast.success('Factura creada');
+    setPdfFile(null);
     setOpen(false);
+    setUploading(false);
     load();
   };
 
-  const remove = async (id: string) => {
+  const remove = async (id: string, filePath?: string) => {
     if (!confirm('¿Eliminar?')) return;
+    if (filePath) {
+      await supabase.storage.from('drying-invoices-files').remove([filePath]);
+    }
     await supabase.from('drying_invoices').delete().eq('id', id);
+    toast.success('Factura eliminada');
     load();
+  };
+
+  const viewPdf = async (filePath: string) => {
+    const { data } = await supabase.storage.from('drying-invoices-files').createSignedUrl(filePath, 300);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    } else {
+      toast.error('No se pudo abrir el archivo');
+    }
+  };
+
+  const handleUploadToExisting = async (invoiceId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file || !user) return;
+      const filePath = `${user.id}/${invoiceId}_${file.name}`;
+      const { error } = await supabase.storage.from('drying-invoices-files').upload(filePath, file, { cacheControl: '3600', upsert: true });
+      if (error) { toast.error(error.message); return; }
+      await supabase.from('drying_invoices').update({ file_path: filePath } as any).eq('id', invoiceId);
+      toast.success('PDF subido');
+      load();
+    };
+    input.click();
   };
 
   return (
@@ -71,7 +131,7 @@ const DryingInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
           <p className="text-muted-foreground">Facturas que emites a tus productores por el servicio de secado</p>
         </div>
-        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setOpen(true); }}>
+        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />Agregar
         </Button>
       </div>
@@ -89,12 +149,13 @@ const DryingInvoices = () => {
                 <TableHead className="text-right">Monto USD</TableHead>
                 <TableHead>Cuotas</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>PDF</TableHead>
                 <TableHead className="w-16"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
               ) : invoices.map(inv => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.producers?.name}</TableCell>
@@ -105,7 +166,18 @@ const DryingInvoices = () => {
                   <TableCell className="text-right">{inv.amount_usd ? `USD ${Number(inv.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</TableCell>
                   <TableCell>{inv.paid_installments}/{inv.total_installments}</TableCell>
                   <TableCell><Badge variant={STATUS_COLORS[inv.status] as any}>{STATUS_LABELS[inv.status]}</Badge></TableCell>
-                  <TableCell><Button variant="ghost" size="icon" onClick={() => remove(inv.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                  <TableCell>
+                    {inv.file_path ? (
+                      <Button variant="ghost" size="icon" onClick={() => viewPdf(inv.file_path)} title="Ver PDF">
+                        <Eye className="h-4 w-4 text-primary" />
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="icon" onClick={() => handleUploadToExisting(inv.id)} title="Subir PDF">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell><Button variant="ghost" size="icon" onClick={() => remove(inv.id, inv.file_path)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -148,6 +220,43 @@ const DryingInvoices = () => {
               <Label>Cuotas</Label>
               <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
             </div>
+
+            {/* PDF Upload */}
+            <div className="space-y-2">
+              <Label>Archivo PDF de la factura</Label>
+              <div
+                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+                />
+                {pdfFile ? (
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="font-medium">{pdfFile.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setPdfFile(null); }}
+                    >
+                      Quitar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    <Upload className="h-6 w-6 mx-auto mb-1" />
+                    Haz clic para seleccionar un PDF
+                  </div>
+                )}
+              </div>
+            </div>
+
             {form.amount_clp && form.exchange_rate && (
               <p className="text-sm text-muted-foreground">
                 Equivalente: USD {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -156,7 +265,9 @@ const DryingInvoices = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={save}>Crear</Button>
+            <Button onClick={save} disabled={uploading}>
+              {uploading ? 'Subiendo...' : 'Crear'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
