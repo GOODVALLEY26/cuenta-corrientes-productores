@@ -31,7 +31,7 @@ const Advances = () => {
     const [p, r, k] = await Promise.all([
       supabase.from('producers').select('id, name').order('name'),
       supabase.from('advance_rates').select('*, producers(name)').eq('year', filterYear).eq('month', filterMonth).order('created_at'),
-      supabase.from('dry_kg_reports').select('producer_id, dry_kg').eq('year', filterYear).eq('month', filterMonth),
+      supabase.from('dry_kg_reports').select('producer_id, dry_kg'),
     ]);
     if (p.data) setProducers(p.data);
     if (r.data) setRates(r.data as any);
@@ -68,7 +68,7 @@ const Advances = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Anticipos</h1>
-          <p className="text-muted-foreground">Centavos por kilo por productor. Anticipo = Kg × Centavos / 100</p>
+          <p className="text-muted-foreground">Centavos por kilo por productor y mes. Anticipo = Kg totales × ¢/kg / 100</p>
         </div>
         <div className="flex gap-2">
           <Select value={String(filterMonth)} onValueChange={v => setFilterMonth(Number(v))}>
@@ -91,7 +91,7 @@ const Advances = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Productor</TableHead>
-                <TableHead className="text-right">Kg Secos</TableHead>
+                <TableHead className="text-right">Kg Secos (total)</TableHead>
                 <TableHead className="text-right">¢/kg</TableHead>
                 <TableHead className="text-right">Anticipo USD</TableHead>
                 <TableHead className="w-16"></TableHead>
@@ -116,7 +116,7 @@ const Advances = () => {
               {rates.length > 0 && (
                 <TableRow className="font-bold bg-muted/50">
                   <TableCell>Total</TableCell>
-                  <TableCell className="text-right">{rates.reduce((s, r) => s + getKg(r.producer_id), 0).toLocaleString('es-CL')}</TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell className="text-right">
                     USD {rates.reduce((s, r) => s + (getKg(r.producer_id) * Number(r.cents_per_kg)) / 100, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, FileText, Upload, Eye } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Producer = { id: string; name: string };
@@ -24,6 +24,7 @@ const DryingInvoices = () => {
   const [open, setOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
 
@@ -37,6 +38,61 @@ const DryingInvoices = () => {
   };
 
   useEffect(() => { if (user) load(); }, [user]);
+
+  const parseInvoicePdf = async (file: File) => {
+    setParsing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'drying');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-invoice`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Error al procesar PDF');
+      const parsed = await res.json();
+
+      if (parsed.error) {
+        toast.error('No se pudo leer la factura: ' + parsed.error);
+        return;
+      }
+
+      // Match producer by name
+      let producerId = '';
+      if (parsed.producer_name) {
+        const match = producers.find(p =>
+          p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
+          parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
+        );
+        if (match) producerId = match.id;
+      }
+
+      setForm(prev => ({
+        ...prev,
+        producer_id: producerId || prev.producer_id,
+        invoice_number: parsed.invoice_number || prev.invoice_number,
+        amount_clp: parsed.amount_clp ? String(parsed.amount_clp) : prev.amount_clp,
+        exchange_rate: parsed.exchange_rate ? String(parsed.exchange_rate) : prev.exchange_rate,
+        date: parsed.date || prev.date,
+        notes: parsed.notes || prev.notes,
+      }));
+
+      toast.success('Datos extraídos del PDF' + (producerId ? '' : ' — selecciona el productor manualmente'));
+    } catch (err: any) {
+      toast.error(err.message || 'Error procesando PDF');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const handleFileSelect = async (file: File) => {
+    setPdfFile(file);
+    await parseInvoicePdf(file);
+  };
 
   const uploadPdf = async (invoiceId: string): Promise<string | null> => {
     if (!pdfFile || !user) return null;
@@ -73,7 +129,6 @@ const DryingInvoices = () => {
 
     if (error) { toast.error(error.message); setUploading(false); return; }
 
-    // Upload PDF if selected
     if (pdfFile && data) {
       const filePath = await uploadPdf(data.id);
       if (filePath) {
@@ -100,11 +155,8 @@ const DryingInvoices = () => {
 
   const viewPdf = async (filePath: string) => {
     const { data } = await supabase.storage.from('drying-invoices-files').createSignedUrl(filePath, 300);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
-    } else {
-      toast.error('No se pudo abrir el archivo');
-    }
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+    else toast.error('No se pudo abrir el archivo');
   };
 
   const handleUploadToExisting = async (invoiceId: string) => {
@@ -129,7 +181,7 @@ const DryingInvoices = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
-          <p className="text-muted-foreground">Facturas que emites a tus productores por el servicio de secado</p>
+          <p className="text-muted-foreground">Sube el PDF y el sistema lee la información automáticamente</p>
         </div>
         <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />Agregar
@@ -186,9 +238,46 @@ const DryingInvoices = () => {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Nueva Factura de Secado</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {/* PDF Upload first - triggers auto-fill */}
+            <div className="space-y-2">
+              <Label>📄 Subir PDF de la factura (se lee automáticamente)</Label>
+              <div
+                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileSelect(f);
+                  }}
+                />
+                {parsing ? (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Leyendo factura con IA...
+                  </div>
+                ) : pdfFile ? (
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="font-medium">{pdfFile.name}</span>
+                    <Button type="button" variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setPdfFile(null); }}>Quitar</Button>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    <Upload className="h-6 w-6 mx-auto mb-1" />
+                    Haz clic para seleccionar un PDF — se extraerán los datos
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Productor *</Label>
               <Select value={form.producer_id} onValueChange={v => setForm({ ...form, producer_id: v })}>
@@ -220,43 +309,6 @@ const DryingInvoices = () => {
               <Label>Cuotas</Label>
               <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
             </div>
-
-            {/* PDF Upload */}
-            <div className="space-y-2">
-              <Label>Archivo PDF de la factura</Label>
-              <div
-                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
-                />
-                {pdfFile ? (
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{pdfFile.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); setPdfFile(null); }}
-                    >
-                      Quitar
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground text-sm">
-                    <Upload className="h-6 w-6 mx-auto mb-1" />
-                    Haz clic para seleccionar un PDF
-                  </div>
-                )}
-              </div>
-            </div>
-
             {form.amount_clp && form.exchange_rate && (
               <p className="text-sm text-muted-foreground">
                 Equivalente: USD {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -265,7 +317,7 @@ const DryingInvoices = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={save} disabled={uploading}>
+            <Button onClick={save} disabled={uploading || parsing}>
               {uploading ? 'Subiendo...' : 'Crear'}
             </Button>
           </DialogFooter>
