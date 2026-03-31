@@ -22,7 +22,7 @@ const ProducerAccount = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('producers').select('id, name, drying_payment_method').order('name').then(({ data }) => {
+    supabase.from('producers').select('id, name, drying_payment_method, rut').order('name').then(({ data }) => {
       if (data) setProducers(data);
     });
   }, [user]);
