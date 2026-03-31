@@ -97,6 +97,7 @@ export type Database = {
           created_at: string
           date: string
           exchange_rate: number | null
+          file_path: string | null
           id: string
           invoice_number: string | null
           notes: string | null
@@ -113,6 +114,7 @@ export type Database = {
           created_at?: string
           date: string
           exchange_rate?: number | null
+          file_path?: string | null
           id?: string
           invoice_number?: string | null
           notes?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           created_at?: string
           date?: string
           exchange_rate?: number | null
+          file_path?: string | null
           id?: string
           invoice_number?: string | null
           notes?: string | null
