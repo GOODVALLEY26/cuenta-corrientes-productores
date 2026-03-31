@@ -243,21 +243,51 @@ const ProducerAccount = () => {
               <Table>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">Total Secado USD</TableCell>
-                    <TableCell className="text-right">USD {fmt(data.totalDryingUsd)}</TableCell>
-                  </TableRow>
-                  <TableRow>
                     <TableCell className="font-medium">Total Secado CLP</TableCell>
-                    <TableCell className="text-right">CLP {fmtClp(data.totalDryingClp)}</TableCell>
+                    <TableCell className="text-right font-bold">CLP {fmtClp(data.totalDryingClp)}</TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Descuento mensual</TableCell>
-                    <TableCell className="text-right">
-                      {data.method === 'descuento_usd' || data.method === 'cuotas'
-                        ? `USD ${fmt(data.dryingDiscountPerMonth)}`
-                        : <span className="text-muted-foreground">No aplica</span>}
-                    </TableCell>
-                  </TableRow>
+                  {data.totalDryingUsd > 0 && (
+                    <TableRow>
+                      <TableCell className="font-medium">Total Secado USD</TableCell>
+                      <TableCell className="text-right">USD {fmt(data.totalDryingUsd)}</TableCell>
+                    </TableRow>
+                  )}
+                  {data.method === 'cuotas' && (
+                    <>
+                      <TableRow>
+                        <TableCell className="font-medium">Cuota mensual CLP</TableCell>
+                        <TableCell className="text-right">CLP {fmtClp(data.cuotaClp)} ({data.advances.length}+1 cuotas)</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium text-green-700">Total Pagado CLP</TableCell>
+                        <TableCell className="text-right text-green-700 font-bold">CLP {fmtClp(data.cuotaTotalPaidClp)}</TableCell>
+                      </TableRow>
+                      {data.cuotaTotalPaidUsd > 0 && (
+                        <TableRow>
+                          <TableCell className="font-medium text-green-700">Total Pagado USD</TableCell>
+                          <TableCell className="text-right text-green-700">USD {fmt(data.cuotaTotalPaidUsd)}</TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow className="bg-muted/50">
+                        <TableCell className="font-bold">Saldo CLP</TableCell>
+                        <TableCell className={`text-right font-bold ${data.cuotaSaldoClp > 0 ? 'text-destructive' : 'text-green-700'}`}>
+                          CLP {fmtClp(data.cuotaSaldoClp)}
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                  {data.method === 'descuento_usd' && (
+                    <TableRow>
+                      <TableCell className="font-medium">Descuento mensual</TableCell>
+                      <TableCell className="text-right">USD {fmt(data.dryingDiscountPerMonth)}</TableCell>
+                    </TableRow>
+                  )}
+                  {data.method !== 'descuento_usd' && data.method !== 'cuotas' && (
+                    <TableRow>
+                      <TableCell className="font-medium">Descuento mensual</TableCell>
+                      <TableCell className="text-right text-muted-foreground">No aplica</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
