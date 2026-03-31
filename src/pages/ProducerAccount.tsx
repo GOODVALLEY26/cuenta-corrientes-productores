@@ -407,7 +407,8 @@ const ProducerAccount = () => {
                  const glosa = data.docType === 'Nota de Débito'
                    ? `Ajuste de precio de anticipo ${nextMonth}`
                    : `Anticipo compra fruta temporada ${data.year}`;
-                 const montoCLP = data.nextMonthEx ? data.docNeededUsd * data.nextMonthEx.rate : 0;
+                 const tc = data.docExRate;
+                 const montoCLP = tc ? data.docNeededUsd * tc : 0;
                  const iva = montoCLP * 0.19;
                  return (
                  <>
@@ -424,18 +425,18 @@ const ProducerAccount = () => {
                         <TableCell className="text-right font-medium">{glosa}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell className="font-medium">Fecha</TableCell>
+                        <TableCell className="font-medium">Fecha Documento</TableCell>
                         <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Monto Neto USD</TableCell>
                         <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
                       </TableRow>
-                      {data.nextMonthEx && (
+                      {tc ? (
                         <>
                           <TableRow>
                             <TableCell className="font-medium">Tipo de Cambio</TableCell>
-                            <TableCell className="text-right">${data.nextMonthEx.rate}</TableCell>
+                            <TableCell className="text-right">${Number(tc).toLocaleString('es-CL')}</TableCell>
                           </TableRow>
                           <TableRow>
                             <TableCell className="font-medium">Monto Neto CLP</TableCell>
@@ -450,6 +451,12 @@ const ProducerAccount = () => {
                             <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(montoCLP + iva))}</TableCell>
                           </TableRow>
                         </>
+                      ) : (
+                        <TableRow>
+                          <TableCell className="font-medium text-muted-foreground" colSpan={2}>
+                            Sin tipo de cambio disponible. Registre un TC en Tipo de Cambio o ingrese una factura del productor.
+                          </TableCell>
+                        </TableRow>
                       )}
                     </TableBody>
                   </Table>
