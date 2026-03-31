@@ -5,11 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { generateProducerPdf } from '@/lib/generateProducerPdf';
 
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-type Producer = { id: string; name: string; drying_payment_method: string };
+type Producer = { id: string; name: string; drying_payment_method: string; rut?: string };
 
 const ProducerAccount = () => {
   const { user } = useAuth();
@@ -20,7 +22,7 @@ const ProducerAccount = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from('producers').select('id, name, drying_payment_method').order('name').then(({ data }) => {
+    supabase.from('producers').select('id, name, drying_payment_method, rut').order('name').then(({ data }) => {
       if (data) setProducers(data);
     });
   }, [user]);
@@ -104,6 +106,7 @@ const ProducerAccount = () => {
     const ivaSaldo = ivaSecado - ivaProductor;
 
     setData({
+      year,
       dryKg,
       totalInvoicedUsd,
       totalInvoicedClp,
@@ -146,6 +149,11 @@ const ProducerAccount = () => {
           <p className="text-muted-foreground">Resumen completo de la relación comercial con cada productor</p>
         </div>
         <div className="flex gap-2">
+          {data && (
+            <Button variant="outline" onClick={() => generateProducerPdf(data)}>
+              <Download className="h-4 w-4 mr-1" /> Descargar PDF
+            </Button>
+          )}
           <Select value={selectedId} onValueChange={setSelectedId}>
             <SelectTrigger className="w-52"><SelectValue placeholder="Seleccionar productor..." /></SelectTrigger>
             <SelectContent>{producers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
