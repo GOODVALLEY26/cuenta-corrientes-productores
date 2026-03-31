@@ -374,11 +374,6 @@ const ProducerAccount = () => {
                          </TableRow>
                        </>
                      )}
-                     <TableRow>
-                       <TableCell className="font-medium text-muted-foreground text-xs" colSpan={2}>
-                         Cálculo: Anticipos acumulados hasta {nextMonth} (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
-                       </TableCell>
-                     </TableRow>
                    </TableBody>
                  </Table>
                  );
