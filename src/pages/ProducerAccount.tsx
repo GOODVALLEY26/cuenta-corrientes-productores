@@ -270,7 +270,6 @@ const ProducerAccount = () => {
                      <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
-                       <TableCell></TableCell>
                        <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
