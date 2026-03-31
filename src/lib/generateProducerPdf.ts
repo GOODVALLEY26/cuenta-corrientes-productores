@@ -191,7 +191,6 @@ export function generateProducerPdf(data: PdfData) {
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
     const paymentRows: string[][] = [
       ['Mes', nextMonth],
-      ['Cálculo', `${Number(data.dryKg).toLocaleString('es-CL')} kg × ${data.nextAdvance.centsPerKg} ¢/kg ÷ 100`],
       ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
     ];
 
