@@ -262,13 +262,6 @@ export function generateProducerPdf(data: PdfData) {
         0: { fontStyle: 'bold', cellWidth: 60 },
         1: { halign: 'right' },
       },
-      didParseCell: (hookData) => {
-        const lastIdx = docRows.length - 1;
-        if (hookData.row.index === lastIdx && hookData.section === 'body') {
-          hookData.cell.styles.fontSize = 7;
-          hookData.cell.styles.fontStyle = 'italic';
-        }
-      },
     });
     y = (doc as any).lastAutoTable.finalY + 10;
   }
