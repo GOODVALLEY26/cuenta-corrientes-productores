@@ -309,6 +309,7 @@ const DryingInvoices = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
             {form.amount_clp && form.exchange_rate && (
               <p className="text-sm text-muted-foreground">
                 Neto USD: {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
