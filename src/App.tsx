@@ -15,6 +15,7 @@ import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
 import IvaTracking from "@/pages/IvaTracking";
 import ExchangeRate from "@/pages/ExchangeRate";
+import ProducerAccount from "@/pages/ProducerAccount";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const ProtectedRoutes = () => {
         <Route path="/facturas-productores" element={<ProducerInvoices />} />
         <Route path="/flujos-pago" element={<PaymentFlows />} />
         <Route path="/control-iva" element={<IvaTracking />} />
+        <Route path="/cuenta-corriente" element={<ProducerAccount />} />
         <Route path="/tipo-cambio" element={<ExchangeRate />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
