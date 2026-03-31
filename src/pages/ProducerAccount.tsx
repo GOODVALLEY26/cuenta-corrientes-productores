@@ -297,12 +297,6 @@ const ProducerAccount = () => {
                        <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
                      </TableRow>
                      <TableRow>
-                       <TableCell className="font-medium">Cálculo</TableCell>
-                       <TableCell className="text-right text-sm text-muted-foreground">
-                         {Number(data.dryKg).toLocaleString('es-CL')} kg × {data.nextAdvance.centsPerKg} ¢/kg ÷ 100
-                       </TableCell>
-                     </TableRow>
-                     <TableRow>
                        <TableCell className="font-medium">Anticipo Bruto</TableCell>
                        <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
                      </TableRow>
