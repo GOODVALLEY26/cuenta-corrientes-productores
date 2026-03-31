@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,13 +34,13 @@ const PaymentFlows = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Get all data for this month
+      // Get all relevant data
       const [producersRes, ratesRes, kgRes, prodInvRes, dryInvRes] = await Promise.all([
         supabase.from('producers').select('*'),
         supabase.from('advance_rates').select('*').eq('year', filterYear).eq('month', filterMonth),
-        supabase.from('dry_kg_reports').select('*').eq('year', filterYear).eq('month', filterMonth),
+        supabase.from('dry_kg_reports').select('*'), // All kg (no month filter)
         supabase.from('producer_invoices').select('*'),
-        supabase.from('drying_invoices').select('*').eq('status', 'pendiente'),
+        supabase.from('drying_invoices').select('*').in('status', ['pendiente', 'parcial']),
       ]);
 
       const producers = producersRes.data ?? [];
@@ -54,27 +54,40 @@ const PaymentFlows = () => {
         const kg = kgs.find(k => k.producer_id === producer.id);
         if (!rate || !kg) continue;
 
+        // Advance = total dry kg × cents per kg / 100
         const advanceUsd = (Number(kg.dry_kg) * Number(rate.cents_per_kg)) / 100;
 
-        // Calculate drying discount based on method
+        // Calculate drying discount based on payment method
         let dryingDiscountUsd = 0;
-        if (producer.drying_payment_method === 'descuento_usd') {
+        const method = producer.drying_payment_method;
+
+        if (method === 'descuento_usd') {
+          // Deduct from advance in USD
           const pendingDrying = dryInvoices.filter(d => d.producer_id === producer.id);
           for (const inv of pendingDrying) {
-            if (inv.amount_usd && inv.total_installments > 0) {
+            if (inv.amount_usd && inv.total_installments && inv.total_installments > 0) {
+              dryingDiscountUsd += Number(inv.amount_usd) / inv.total_installments;
+            }
+          }
+        } else if (method === 'cuotas') {
+          // Installments - divide total drying into equal parts
+          const pendingDrying = dryInvoices.filter(d => d.producer_id === producer.id);
+          for (const inv of pendingDrying) {
+            if (inv.amount_usd && inv.total_installments && inv.total_installments > 0) {
               dryingDiscountUsd += Number(inv.amount_usd) / inv.total_installments;
             }
           }
         }
+        // 'pago_clp' and 'liquidacion_fin_año' don't deduct from advance
 
-        // Calculate total invoiced by producer
+        const netPayment = advanceUsd - dryingDiscountUsd;
+
+        // Check producer invoiced amount
         const producerInvoicedUsd = prodInvoices
           .filter(i => i.producer_id === producer.id)
           .reduce((s, i) => s + Number(i.amount_usd), 0);
 
-        const netPayment = advanceUsd - dryingDiscountUsd;
-
-        // Determine if document is needed
+        // Document logic
         const requiresDocument = producerInvoicedUsd < advanceUsd;
         let documentTypeNeeded: string | null = null;
         let documentAmountUsd = 0;
@@ -120,7 +133,7 @@ const PaymentFlows = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Flujos de Pago</h1>
-          <p className="text-muted-foreground">Resumen mensual de pagos por productor</p>
+          <p className="text-muted-foreground">Anticipo = Kg totales × ¢/kg del mes. Descuento según método de pago secado.</p>
         </div>
         <div className="flex gap-2">
           <Select value={String(filterMonth)} onValueChange={v => setFilterMonth(Number(v))}>

@@ -66,10 +66,10 @@ export type Database = {
           created_at?: string
           dry_kg: number
           id?: string
-          month: number
+          month?: number
           producer_id: string
           user_id: string
-          year: number
+          year?: number
         }
         Update: {
           created_at?: string
@@ -84,7 +84,7 @@ export type Database = {
           {
             foreignKeyName: "dry_kg_reports_producer_id_fkey"
             columns: ["producer_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "producers"
             referencedColumns: ["id"]
           },
@@ -258,6 +258,7 @@ export type Database = {
           date: string
           document_type: Database["public"]["Enums"]["document_type"]
           exchange_rate: number
+          file_path: string | null
           id: string
           invoice_number: string | null
           notes: string | null
@@ -272,6 +273,7 @@ export type Database = {
           date: string
           document_type?: Database["public"]["Enums"]["document_type"]
           exchange_rate: number
+          file_path?: string | null
           id?: string
           invoice_number?: string | null
           notes?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           date?: string
           document_type?: Database["public"]["Enums"]["document_type"]
           exchange_rate?: number
+          file_path?: string | null
           id?: string
           invoice_number?: string | null
           notes?: string | null
