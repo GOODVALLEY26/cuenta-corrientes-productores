@@ -26,7 +26,7 @@ const DryingInvoices = () => {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const load = async () => {
     const [p, i] = await Promise.all([
@@ -61,7 +61,6 @@ const DryingInvoices = () => {
         return;
       }
 
-      // Match producer by name
       let producerId = '';
       if (parsed.producer_name) {
         const match = producers.find(p =>
@@ -75,7 +74,8 @@ const DryingInvoices = () => {
         ...prev,
         producer_id: producerId || prev.producer_id,
         invoice_number: parsed.invoice_number || prev.invoice_number,
-        amount_clp: parsed.amount_clp ? String(parsed.amount_clp) : prev.amount_clp,
+        amount_clp: parsed.amount_net_clp ? String(parsed.amount_net_clp) : (parsed.amount_clp ? String(parsed.amount_clp) : prev.amount_clp),
+        iva_clp: parsed.iva_clp ? String(parsed.iva_clp) : prev.iva_clp,
         exchange_rate: parsed.exchange_rate ? String(parsed.exchange_rate) : prev.exchange_rate,
         date: parsed.date || prev.date,
         notes: parsed.notes || prev.notes,
@@ -97,14 +97,8 @@ const DryingInvoices = () => {
   const uploadPdf = async (invoiceId: string): Promise<string | null> => {
     if (!pdfFile || !user) return null;
     const filePath = `${user.id}/${invoiceId}_${pdfFile.name}`;
-    const { error } = await supabase.storage.from('drying-invoices-files').upload(filePath, pdfFile, {
-      cacheControl: '3600',
-      upsert: true,
-    });
-    if (error) {
-      toast.error('Error subiendo PDF: ' + error.message);
-      return null;
-    }
+    const { error } = await supabase.storage.from('drying-invoices-files').upload(filePath, pdfFile, { cacheControl: '3600', upsert: true });
+    if (error) { toast.error('Error subiendo PDF: ' + error.message); return null; }
     return filePath;
   };
 
@@ -112,6 +106,7 @@ const DryingInvoices = () => {
     if (!form.producer_id || !form.amount_clp) { toast.error('Completa los campos requeridos'); return; }
     setUploading(true);
     const amountClp = Number(form.amount_clp);
+    const ivaClp = Number(form.iva_clp) || 0;
     const er = form.exchange_rate ? Number(form.exchange_rate) : null;
     const amountUsd = er ? amountClp / er : null;
 
@@ -119,6 +114,7 @@ const DryingInvoices = () => {
       producer_id: form.producer_id,
       invoice_number: form.invoice_number || null,
       amount_clp: amountClp,
+      iva_clp: ivaClp,
       exchange_rate: er,
       amount_usd: amountUsd,
       total_installments: Number(form.total_installments),
@@ -145,9 +141,7 @@ const DryingInvoices = () => {
 
   const remove = async (id: string, filePath?: string) => {
     if (!confirm('¿Eliminar?')) return;
-    if (filePath) {
-      await supabase.storage.from('drying-invoices-files').remove([filePath]);
-    }
+    if (filePath) await supabase.storage.from('drying-invoices-files').remove([filePath]);
     await supabase.from('drying_invoices').delete().eq('id', id);
     toast.success('Factura eliminada');
     load();
@@ -181,9 +175,9 @@ const DryingInvoices = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
-          <p className="text-muted-foreground">Sube el PDF y el sistema lee la información automáticamente</p>
+          <p className="text-muted-foreground">Sube el PDF y el sistema lee Neto + IVA automáticamente</p>
         </div>
-        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
+        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />Agregar
         </Button>
       </div>
@@ -196,9 +190,10 @@ const DryingInvoices = () => {
                 <TableHead>Productor</TableHead>
                 <TableHead>N° Factura</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Monto CLP</TableHead>
+                <TableHead className="text-right">Neto CLP</TableHead>
+                <TableHead className="text-right">IVA CLP</TableHead>
                 <TableHead className="text-right">TC</TableHead>
-                <TableHead className="text-right">Monto USD</TableHead>
+                <TableHead className="text-right">Neto USD</TableHead>
                 <TableHead>Cuotas</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>PDF</TableHead>
@@ -207,13 +202,14 @@ const DryingInvoices = () => {
             </TableHeader>
             <TableBody>
               {invoices.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">Sin facturas</TableCell></TableRow>
               ) : invoices.map(inv => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.producers?.name}</TableCell>
                   <TableCell>{inv.invoice_number ?? '-'}</TableCell>
                   <TableCell>{new Date(inv.date).toLocaleDateString('es-CL')}</TableCell>
                   <TableCell className="text-right">${Number(inv.amount_clp).toLocaleString('es-CL')}</TableCell>
+                  <TableCell className="text-right">${Number(inv.iva_clp || 0).toLocaleString('es-CL')}</TableCell>
                   <TableCell className="text-right">{inv.exchange_rate ?? '-'}</TableCell>
                   <TableCell className="text-right">{inv.amount_usd ? `USD ${Number(inv.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</TableCell>
                   <TableCell>{inv.paid_installments}/{inv.total_installments}</TableCell>
@@ -241,27 +237,16 @@ const DryingInvoices = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Nueva Factura de Secado</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            {/* PDF Upload first - triggers auto-fill */}
             <div className="space-y-2">
               <Label>📄 Subir PDF de la factura (se lee automáticamente)</Label>
               <div
                 className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileSelect(f);
-                  }}
-                />
+                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
                 {parsing ? (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Leyendo factura con IA...
+                    <Loader2 className="h-5 w-5 animate-spin" />Leyendo factura con IA...
                   </div>
                 ) : pdfFile ? (
                   <div className="flex items-center justify-center gap-2 text-sm">
@@ -271,8 +256,7 @@ const DryingInvoices = () => {
                   </div>
                 ) : (
                   <div className="text-muted-foreground text-sm">
-                    <Upload className="h-6 w-6 mx-auto mb-1" />
-                    Haz clic para seleccionar un PDF — se extraerán los datos
+                    <Upload className="h-6 w-6 mx-auto mb-1" />Haz clic para seleccionar un PDF — se extraerán los datos
                   </div>
                 )}
               </div>
@@ -297,29 +281,34 @@ const DryingInvoices = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Monto CLP *</Label>
+                <Label>Monto Neto CLP *</Label>
                 <Input type="number" value={form.amount_clp} onChange={e => setForm({ ...form, amount_clp: e.target.value })} />
               </div>
+              <div className="space-y-2">
+                <Label>IVA CLP</Label>
+                <Input type="number" value={form.iva_clp} onChange={e => setForm({ ...form, iva_clp: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo de Cambio (CLP/USD)</Label>
                 <Input type="number" step="0.01" value={form.exchange_rate} onChange={e => setForm({ ...form, exchange_rate: e.target.value })} placeholder="ej: 950" />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Cuotas</Label>
-              <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
+              <div className="space-y-2">
+                <Label>Cuotas</Label>
+                <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
+              </div>
             </div>
             {form.amount_clp && form.exchange_rate && (
               <p className="text-sm text-muted-foreground">
-                Equivalente: USD {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                Neto USD: {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {form.iva_clp && ` · IVA USD: ${(Number(form.iva_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </p>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={save} disabled={uploading || parsing}>
-              {uploading ? 'Subiendo...' : 'Crear'}
-            </Button>
+            <Button onClick={save} disabled={uploading || parsing}>{uploading ? 'Subiendo...' : 'Crear'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
