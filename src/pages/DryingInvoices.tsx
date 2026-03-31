@@ -299,7 +299,16 @@ const DryingInvoices = () => {
                 <Label>Cuotas</Label>
                 <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label>Moneda Cuotas</Label>
+                <Select value={form.installment_currency} onValueChange={v => setForm({ ...form, installment_currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clp">CLP</SelectItem>
+                    <SelectItem value="usd">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             {form.amount_clp && form.exchange_rate && (
               <p className="text-sm text-muted-foreground">
                 Neto USD: {(Number(form.amount_clp) / Number(form.exchange_rate)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
