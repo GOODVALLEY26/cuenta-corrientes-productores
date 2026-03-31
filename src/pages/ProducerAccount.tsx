@@ -325,7 +325,7 @@ const ProducerAccount = () => {
                   {data.advances.length === 0 ? (
                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
-                     const discount = (data.method === 'descuento_usd' || data.method === 'cuotas') ? data.dryingDiscountPerMonth : 0;
+                     const discount = data.discountByMonth[a.month] ?? 0;
                      const net = a.advance - discount;
                      return (
                        <TableRow key={a.month}>
