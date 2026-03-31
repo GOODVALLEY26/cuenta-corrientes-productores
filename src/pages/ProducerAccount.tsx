@@ -159,6 +159,11 @@ const ProducerAccount = () => {
       ivaSecado,
       ivaProductor,
       producer,
+      cuotaClp,
+      cuotaTotalPaidClp,
+      cuotaTotalPaidUsd,
+      cuotaSaldoClp,
+      cuotaDetails,
     });
   };
 
