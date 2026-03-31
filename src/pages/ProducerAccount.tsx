@@ -334,36 +334,65 @@ const ProducerAccount = () => {
               <CardTitle className="text-base">Documento Requerido</CardTitle>
             </CardHeader>
             <CardContent>
-              {data.needsDocument ? (
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Tipo</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="destructive">{data.docType}</Badge>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Monto USD</TableCell>
-                      <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
-                    </TableRow>
-                    {data.nextMonthEx && (
-                      <>
-                        <TableRow>
-                          <TableCell className="font-medium">Tipo de Cambio</TableCell>
-                          <TableCell className="text-right">{data.nextMonthEx.rate}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">Monto CLP</TableCell>
-                          <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(data.docNeededUsd * data.nextMonthEx.rate))}</TableCell>
-                        </TableRow>
-                      </>
-                    )}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
-              )}
+              {data.needsDocument ? (() => {
+                 const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '';
+                 const glosa = data.docType === 'Nota de Débito'
+                   ? `Ajuste de precio de anticipo ${nextMonth}`
+                   : `Anticipo compra fruta temporada ${data.year}`;
+                 const montoCLP = data.nextMonthEx ? data.docNeededUsd * data.nextMonthEx.rate : 0;
+                 const iva = montoCLP * 0.19;
+                 return (
+                 <Table>
+                   <TableBody>
+                     <TableRow>
+                       <TableCell className="font-medium">Tipo</TableCell>
+                       <TableCell className="text-right">
+                         <Badge variant="destructive">{data.docType}</Badge>
+                       </TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Glosa</TableCell>
+                       <TableCell className="text-right font-medium">{glosa}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Fecha</TableCell>
+                       <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
+                     </TableRow>
+                     <TableRow>
+                       <TableCell className="font-medium">Monto Neto USD</TableCell>
+                       <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
+                     </TableRow>
+                     {data.nextMonthEx && (
+                       <>
+                         <TableRow>
+                           <TableCell className="font-medium">Tipo de Cambio</TableCell>
+                           <TableCell className="text-right">${data.nextMonthEx.rate}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Monto Neto CLP</TableCell>
+                           <TableCell className="text-right">CLP {fmtClp(montoCLP)}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">IVA (19%)</TableCell>
+                           <TableCell className="text-right">CLP {fmtClp(iva)}</TableCell>
+                         </TableRow>
+                         <TableRow className="bg-muted/50">
+                           <TableCell className="font-bold">Total Documento</TableCell>
+                           <TableCell className="text-right font-bold">CLP {fmtClp(montoCLP + iva)}</TableCell>
+                         </TableRow>
+                       </>
+                     )}
+                     <TableRow>
+                       <TableCell className="font-medium text-muted-foreground text-xs" colSpan={2}>
+                         Cálculo: Anticipos acumulados hasta {nextMonth} (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
+                       </TableCell>
+                     </TableRow>
+                   </TableBody>
+                 </Table>
+                 );
+               })() : (
+                 <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
+               )}
             </CardContent>
           </Card>
 
