@@ -44,6 +44,7 @@ const ProtectedRoutes = () => {
         <Route path="/facturas-secado" element={<DryingInvoices />} />
         <Route path="/facturas-productores" element={<ProducerInvoices />} />
         <Route path="/flujos-pago" element={<PaymentFlows />} />
+        <Route path="/cuotas-secado" element={<InstallmentPayments />} />
         <Route path="/control-iva" element={<IvaTracking />} />
         <Route path="/cuenta-corriente" element={<ProducerAccount />} />
         <Route path="/tipo-cambio" element={<ExchangeRate />} />
