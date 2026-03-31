@@ -108,7 +108,7 @@ export function generateProducerPdf(data: PdfData) {
     const net = a.advance - discount;
     const row: string[] = [
       MONTHS_FULL[a.month - 1],
-      `${a.centsPerKg}`,
+      fmt(a.centsPerKg / 100),
       `USD ${fmt(a.advance)}`,
     ];
     if (showDiscount) {
@@ -119,7 +119,7 @@ export function generateProducerPdf(data: PdfData) {
     return row;
   });
 
-  const advHeaders: string[] = ['Mes', '¢/kg', 'Anticipo USD'];
+  const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
   if (showDiscount) {
     advHeaders.push('Desc. Secado', 'Neto USD');
   }
