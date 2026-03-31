@@ -29,6 +29,11 @@ interface PdfData {
   ivaSecado: number;
   ivaProductor: number;
   ivaSaldo: number;
+  cuotaClp?: number;
+  cuotaTotalPaidClp?: number;
+  cuotaTotalPaidUsd?: number;
+  cuotaSaldoClp?: number;
+  cuotaDetails?: any[];
 }
 
 const methodLabel: Record<string, string> = {
