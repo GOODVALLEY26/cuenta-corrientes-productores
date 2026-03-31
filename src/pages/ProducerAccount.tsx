@@ -11,7 +11,7 @@ import { generateProducerPdf } from '@/lib/generateProducerPdf';
 
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-type Producer = { id: string; name: string; drying_payment_method: string };
+type Producer = { id: string; name: string; drying_payment_method: string; rut?: string };
 
 const ProducerAccount = () => {
   const { user } = useAuth();
