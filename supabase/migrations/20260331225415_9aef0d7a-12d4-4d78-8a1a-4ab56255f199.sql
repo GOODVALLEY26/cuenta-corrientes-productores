@@ -1,0 +1,1 @@
+ALTER TABLE public.dry_kg_reports DROP CONSTRAINT IF EXISTS dry_kg_reports_month_check;
