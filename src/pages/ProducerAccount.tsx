@@ -70,37 +70,32 @@ const ProducerAccount = () => {
     const totalDryingUsd = dryInvoices.reduce((s, i) => s + Number(i.amount_usd ?? 0), 0);
     const totalDryingClp = dryInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
-    // Cuota logic for 'cuotas' method
+    // Cuota logic - works for all methods
     const method = producer.drying_payment_method;
-    let cuotaClp = 0;
-    let cuotaTotalPaidClp = 0;
-    let cuotaTotalPaidUsd = 0;
-    let cuotaSaldoClp = 0;
-    let cuotaDetails: any[] = [];
+    const numInstallments = advances.length + 1;
+    const cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
+
+    // All installment payments for this producer
+    const cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+    const cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
+    const cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
+    const cuotaDetails = installmentPayments;
 
     // Fallback exchange rate: last producer invoice's exchange_rate
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
     const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
 
-    // Build per-month discount map for cuotas
+    // Build per-month discount map
+    // Only USD cuotas discount from anticipos
     const discountByMonth: Record<number, number> = {};
+    const hasCuotasUsd = dryInvoices.some(inv => inv.installment_currency === 'usd');
 
-    if (method === 'cuotas') {
-      const numInstallments = advances.length + 1;
-      cuotaClp = totalDryingClp / numInstallments;
-
-      cuotaDetails = installmentPayments;
-      cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
-      cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
-      cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
-
-      // For each advance, find the corresponding installment's USD amount
+    if (hasCuotasUsd) {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
         if (inst && inst.amount_usd) {
           discountByMonth[adv.month] = Number(inst.amount_usd);
         } else {
-          // Use exchange rate for that month, or fallback to last invoice TC
           const monthEx = exRates.find(e => e.month === adv.month);
           const tc = monthEx ? Number(monthEx.rate) : fallbackExRate;
           discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
