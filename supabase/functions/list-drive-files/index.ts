@@ -84,10 +84,16 @@ serve(async (req) => {
     
     if (!folderId) throw new Error('folderId is required')
 
-    const saB64 = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_B64')
-    if (!saB64) throw new Error('GOOGLE_SERVICE_ACCOUNT_B64 not configured')
-
-    const saJson = new TextDecoder().decode(Uint8Array.from(atob(saB64), c => c.charCodeAt(0)))
+    // Read credentials from database (stored as base64)
+    const sbUrl = Deno.env.get('SUPABASE_URL')!
+    const sbKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const configRes = await fetch(`${sbUrl}/rest/v1/app_config?key=eq.google_sa_b64&select=value`, {
+      headers: { 'Authorization': `Bearer ${sbKey}`, 'apikey': sbKey },
+    })
+    const configData = await configRes.json()
+    if (!configData?.[0]?.value) throw new Error('Google service account not configured in database')
+    
+    const saJson = new TextDecoder().decode(Uint8Array.from(atob(configData[0].value), c => c.charCodeAt(0)))
     const serviceAccount = JSON.parse(saJson)
     const accessToken = await getAccessToken(serviceAccount)
 
