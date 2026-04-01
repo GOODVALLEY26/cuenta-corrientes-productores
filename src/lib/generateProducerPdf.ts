@@ -169,9 +169,10 @@ export async function generateProducerPdf(data: PdfData) {
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
   autoTable(doc, {
     startY: ry,
-    margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+    margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+    tableWidth: halfW - 4,
     theme: 'plain',
-    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
       ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
       ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
