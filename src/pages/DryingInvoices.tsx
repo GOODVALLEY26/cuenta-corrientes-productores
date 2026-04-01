@@ -110,6 +110,9 @@ const DryingInvoices = () => {
     const er = form.exchange_rate ? Number(form.exchange_rate) : null;
     const amountUsd = er ? amountClp / er : null;
 
+    const installmentCurrency = form.payment_method === 'cuotas_usd' ? 'usd' : form.payment_method === 'cuotas_clp' ? 'clp' : 'liquidacion';
+    const totalInstallments = form.payment_method === 'liquidacion_final' ? 1 : 1; // will be calculated from advances when generating
+
     const { data, error } = await supabase.from('drying_invoices').insert({
       producer_id: form.producer_id,
       invoice_number: form.invoice_number || null,
@@ -117,8 +120,8 @@ const DryingInvoices = () => {
       iva_clp: ivaClp,
       exchange_rate: er,
       amount_usd: amountUsd,
-      total_installments: Number(form.total_installments),
-      installment_currency: form.installment_currency,
+      total_installments: totalInstallments,
+      installment_currency: installmentCurrency,
       date: form.date,
       notes: form.notes || null,
       user_id: user!.id,
