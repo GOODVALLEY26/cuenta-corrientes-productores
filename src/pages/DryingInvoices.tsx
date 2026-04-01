@@ -26,7 +26,7 @@ const DryingInvoices = () => {
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', installment_currency: 'clp', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp' as 'cuotas_usd' | 'cuotas_clp' | 'liquidacion_final', date: new Date().toISOString().split('T')[0], notes: '' });
 
   const load = async () => {
     const [p, i] = await Promise.all([
@@ -110,6 +110,9 @@ const DryingInvoices = () => {
     const er = form.exchange_rate ? Number(form.exchange_rate) : null;
     const amountUsd = er ? amountClp / er : null;
 
+    const installmentCurrency = form.payment_method === 'cuotas_usd' ? 'usd' : form.payment_method === 'cuotas_clp' ? 'clp' : 'liquidacion';
+    const totalInstallments = form.payment_method === 'liquidacion_final' ? 1 : 1; // will be calculated from advances when generating
+
     const { data, error } = await supabase.from('drying_invoices').insert({
       producer_id: form.producer_id,
       invoice_number: form.invoice_number || null,
@@ -117,8 +120,8 @@ const DryingInvoices = () => {
       iva_clp: ivaClp,
       exchange_rate: er,
       amount_usd: amountUsd,
-      total_installments: Number(form.total_installments),
-      installment_currency: form.installment_currency,
+      total_installments: totalInstallments,
+      installment_currency: installmentCurrency,
       date: form.date,
       notes: form.notes || null,
       user_id: user!.id,
@@ -178,7 +181,7 @@ const DryingInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
           <p className="text-muted-foreground">Sube el PDF y el sistema lee Neto + IVA automáticamente</p>
         </div>
-        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', total_installments: '1', installment_currency: 'clp', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
+        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />Agregar
         </Button>
       </div>
@@ -195,7 +198,7 @@ const DryingInvoices = () => {
                 <TableHead className="text-right">IVA CLP</TableHead>
                 <TableHead className="text-right">TC</TableHead>
                 <TableHead className="text-right">Neto USD</TableHead>
-                <TableHead>Cuotas</TableHead>
+                <TableHead>Método Pago</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>PDF</TableHead>
                 <TableHead className="w-16"></TableHead>
@@ -213,7 +216,11 @@ const DryingInvoices = () => {
                   <TableCell className="text-right">${Number(inv.iva_clp || 0).toLocaleString('es-CL')}</TableCell>
                   <TableCell className="text-right">{inv.exchange_rate ?? '-'}</TableCell>
                   <TableCell className="text-right">{inv.amount_usd ? `USD ${Number(inv.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</TableCell>
-                  <TableCell>{inv.paid_installments}/{inv.total_installments}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {inv.installment_currency === 'usd' ? 'Cuotas USD' : inv.installment_currency === 'liquidacion' ? 'Liquidación' : 'Cuotas CLP'}
+                    </Badge>
+                  </TableCell>
                   <TableCell><Badge variant={STATUS_COLORS[inv.status] as any}>{STATUS_LABELS[inv.status]}</Badge></TableCell>
                   <TableCell>
                     {inv.file_path ? (
@@ -296,16 +303,13 @@ const DryingInvoices = () => {
                 <Input type="number" step="0.01" value={form.exchange_rate} onChange={e => setForm({ ...form, exchange_rate: e.target.value })} placeholder="ej: 950" />
               </div>
               <div className="space-y-2">
-                <Label>Cuotas</Label>
-                <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Moneda Cuotas</Label>
-                <Select value={form.installment_currency} onValueChange={v => setForm({ ...form, installment_currency: v })}>
+                <Label>Método de Pago Secado</Label>
+                <Select value={form.payment_method} onValueChange={(v: any) => setForm({ ...form, payment_method: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="clp">CLP</SelectItem>
-                    <SelectItem value="usd">USD</SelectItem>
+                    <SelectItem value="cuotas_clp">Cuotas en CLP</SelectItem>
+                    <SelectItem value="cuotas_usd">Cuotas en USD</SelectItem>
+                    <SelectItem value="liquidacion_final">Liquidación Final</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
