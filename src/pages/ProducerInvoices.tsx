@@ -19,13 +19,10 @@ const ProducerInvoices = () => {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [driveOpen, setDriveOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [needsTc, setNeedsTc] = useState(false);
-  const [driveBase64, setDriveBase64] = useState<string | null>(null);
-  const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' });
 
