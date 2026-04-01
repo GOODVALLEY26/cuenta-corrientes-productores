@@ -54,20 +54,20 @@ const CARD_BORDER: [number, number, number] = [200, 180, 220];
 
 function sectionTitle(doc: jsPDF, x: number, y: number, w: number, title: string): number {
   doc.setFillColor(...PRIMARY);
-  doc.roundedRect(x, y, w, 6, 1, 1, 'F');
-  doc.rect(x, y + 3.5, w, 2.5, 'F');
-  doc.setFontSize(7);
+  doc.roundedRect(x, y, w, 9, 2, 2, 'F');
+  doc.rect(x, y + 5, w, 4, 'F');
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(title, x + 2.5, y + 4.2);
+  doc.text(title, x + 4, y + 6.2);
   doc.setTextColor(0, 0, 0);
-  return y + 6.5;
+  return y + 10;
 }
 
 function cardBorder(doc: jsPDF, x: number, y: number, w: number, h: number) {
   doc.setDrawColor(...CARD_BORDER);
-  doc.setLineWidth(0.25);
-  doc.roundedRect(x, y, w, h, 1, 1, 'S');
+  doc.setLineWidth(0.4);
+  doc.roundedRect(x, y, w, h, 2, 2, 'S');
 }
 
 async function loadLogoAsBase64(): Promise<string | null> {
@@ -87,61 +87,61 @@ async function loadLogoAsBase64(): Promise<string | null> {
 
 export async function generateProducerPdf(data: PdfData) {
   const doc = new jsPDF('p', 'mm', 'letter');
-  const pw = doc.internal.pageSize.getWidth();
-  const ph = doc.internal.pageSize.getHeight();
-  const m = 8; // tight margins
-  const cw = pw - m * 2; // content width
+  const pw = doc.internal.pageSize.getWidth();  // 216
+  const ph = doc.internal.pageSize.getHeight(); // 279
+  const m = 12;
+  const cw = pw - m * 2;
   let y = 0;
 
-  // ── HEADER (compact) ──
+  // ── HEADER ──
   const logoBase64 = await loadLogoAsBase64();
   doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pw, 22, 'F');
+  doc.rect(0, 0, pw, 34, 'F');
 
   if (logoBase64) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(m, 2, 26, 18, 1.5, 1.5, 'F');
-    doc.addImage(logoBase64, 'PNG', m + 1, 3, 24, 16);
+    doc.roundedRect(m, 3, 38, 28, 2, 2, 'F');
+    doc.addImage(logoBase64, 'PNG', m + 2, 5, 34, 24);
   }
 
-  const tx = logoBase64 ? 40 : pw / 2;
+  const tx = logoBase64 ? 56 : pw / 2;
   const ta: any = logoBase64 ? 'left' : 'center';
-  doc.setFontSize(13);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Cuenta Corriente Productor', tx, 10, { align: ta });
-  doc.setFontSize(8);
+  doc.text('Cuenta Corriente Productor', tx, 15, { align: ta });
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Temporada ${data.year}`, tx, 15.5, { align: ta });
-  doc.setFontSize(6.5);
+  doc.text(`Temporada ${data.year}`, tx, 22, { align: ta });
+  doc.setFontSize(8);
   doc.setTextColor(210, 190, 230);
   const today = new Date();
-  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, tx, 19.5, { align: ta });
+  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, tx, 28, { align: ta });
   doc.setTextColor(0, 0, 0);
 
   // Producer bar
-  y = 24;
+  y = 37;
   doc.setFillColor(...MUTED_BG);
-  doc.roundedRect(m, y, cw, 7, 1, 1, 'F');
-  doc.setFontSize(8.5);
+  doc.roundedRect(m, y, cw, 10, 2, 2, 'F');
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...PRIMARY);
-  doc.text(data.producer.name, m + 3, y + 4.8);
+  doc.text(data.producer.name, m + 4, y + 6.8);
   if (data.producer.rut) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text(`RUT: ${data.producer.rut}`, pw - m - 3, y + 4.8, { align: 'right' });
+    doc.text(`RUT: ${data.producer.rut}`, pw - m - 4, y + 6.8, { align: 'right' });
   }
   doc.setTextColor(0, 0, 0);
-  y = 33;
+  y = 50;
 
-  const gap = 3;
-  const halfW = (cw - gap) / 2;
+  const sp = 5; // spacing between sections
+  const halfW = (cw - 6) / 2;
   const lx = m;
-  const rx = m + halfW + gap;
-  const cellPad = 1.2;
-  const fontSize = 6.5;
+  const rx = m + halfW + 6;
+  const fs = 8.5;
+  const cp = 2.5;
 
   // ═══════════════════════════════════════════
   // 1. FACTURACIÓN & SECADO
@@ -149,15 +149,15 @@ export async function generateProducerPdf(data: PdfData) {
   let ly = sectionTitle(doc, lx, y, halfW, 'Facturación Total');
   autoTable(doc, {
     startY: ly,
-    margin: { left: lx + 1, right: pw - lx - halfW + 1 },
+    margin: { left: lx + 2, right: pw - lx - halfW + 2 },
     theme: 'plain',
-    styles: { fontSize, cellPadding: cellPad, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
     body: [
       ['Kg Secos Totales', `${Number(data.dryKg).toLocaleString('es-CL')} kg`],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 1: { halign: 'right' } },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
       if (h.row.index === 1 && h.column.index === 1 && h.section === 'body') {
         h.cell.styles.fontStyle = 'bold';
@@ -170,16 +170,16 @@ export async function generateProducerPdf(data: PdfData) {
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
   autoTable(doc, {
     startY: ry,
-    margin: { left: rx + 1, right: pw - rx - halfW + 1 },
+    margin: { left: rx + 2, right: pw - rx - halfW + 2 },
     theme: 'plain',
-    styles: { fontSize, cellPadding: cellPad, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
     body: [
       ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
       ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
       ['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`],
       ['Método pago', methodLabel[data.method] ?? data.method],
     ],
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 1: { halign: 'right' } },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
       if (h.section === 'body') {
         const label = String(h.row.raw?.[0] ?? '');
@@ -194,10 +194,10 @@ export async function generateProducerPdf(data: PdfData) {
   });
   const rEnd1 = (doc as any).lastAutoTable.finalY;
 
-  const h1 = Math.max(lEnd1, rEnd1) - y + 0.5;
+  const h1 = Math.max(lEnd1, rEnd1) - y + 1;
   cardBorder(doc, lx, y, halfW, h1);
   cardBorder(doc, rx, y, halfW, h1);
-  y = Math.max(lEnd1, rEnd1) + gap;
+  y = Math.max(lEnd1, rEnd1) + sp;
 
   // ═══════════════════════════════════════════
   // 2. ANTICIPOS
@@ -230,11 +230,11 @@ export async function generateProducerPdf(data: PdfData) {
   const statusCol = showDiscount ? 5 : 3;
 
   autoTable(doc, {
-    startY: aY + 6.5,
-    margin: { left: m + 0.5, right: m + 0.5 },
+    startY: aY + 10,
+    margin: { left: m + 1, right: m + 1 },
     theme: 'grid',
-    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 6, halign: 'center', textColor: [255, 255, 255], cellPadding: 1 },
-    styles: { fontSize: 6, cellPadding: 1, lineColor: [...CARD_BORDER], lineWidth: 0.15 },
+    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
+    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2 },
     head: [advHeaders],
     body: advRows,
     columnStyles: {
@@ -266,8 +266,8 @@ export async function generateProducerPdf(data: PdfData) {
   });
 
   const aEnd = (doc as any).lastAutoTable.finalY;
-  cardBorder(doc, m, aY, cw, aEnd - aY + 0.5);
-  y = aEnd + gap;
+  cardBorder(doc, m, aY, cw, aEnd - aY + 1);
+  y = aEnd + sp;
 
   // ═══════════════════════════════════════════
   // 3. PRÓXIMO PAGO & DOCUMENTO REQUERIDO
@@ -276,7 +276,6 @@ export async function generateProducerPdf(data: PdfData) {
     const pY = y;
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
 
-    // Left: Próximo Pago
     let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
     const payRows: string[][] = [
       ['Mes', nextMonth],
@@ -287,18 +286,18 @@ export async function generateProducerPdf(data: PdfData) {
 
     autoTable(doc, {
       startY: lpY,
-      margin: { left: lx + 1, right: pw - lx - halfW + 1 },
+      margin: { left: lx + 2, right: pw - lx - halfW + 2 },
       theme: 'plain',
-      styles: { fontSize, cellPadding: cellPad, textColor: [50, 50, 50] },
+      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
       body: payRows,
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 26 }, 1: { halign: 'right' } },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
       didParseCell: (h) => {
         if (h.section === 'body') {
           const label = String(h.row.raw?.[0] ?? '');
           if (label === 'Neto a Pagar') {
             h.cell.styles.fontStyle = 'bold';
             h.cell.styles.fillColor = [...MUTED_BG];
-            h.cell.styles.fontSize = 7.5;
+            h.cell.styles.fontSize = 10;
             h.cell.styles.textColor = [...PRIMARY];
           }
           if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
@@ -307,7 +306,6 @@ export async function generateProducerPdf(data: PdfData) {
     });
     const lpEnd = (doc as any).lastAutoTable.finalY;
 
-    // Right: Documento
     let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
@@ -323,11 +321,11 @@ export async function generateProducerPdf(data: PdfData) {
       }
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 1, right: pw - rx - halfW + 1 },
+        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
         theme: 'plain',
-        styles: { fontSize, cellPadding: cellPad, textColor: [50, 50, 50] },
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
         body: docRows,
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 20 }, 1: { halign: 'right' } },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
         didParseCell: (h) => {
           if (h.section === 'body') {
             const label = String(h.row.raw?.[0] ?? '');
@@ -343,24 +341,28 @@ export async function generateProducerPdf(data: PdfData) {
     } else {
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 1, right: pw - rx - halfW + 1 },
+        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
         theme: 'plain',
-        styles: { fontSize: 7, cellPadding: 1.5 },
+        styles: { fontSize: 9, cellPadding: 3 },
         body: [['Facturación al día ✓']],
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
     }
     const rpEnd = (doc as any).lastAutoTable.finalY;
 
-    const pH = Math.max(lpEnd, rpEnd) - pY + 0.5;
+    const pH = Math.max(lpEnd, rpEnd) - pY + 1;
     cardBorder(doc, lx, pY, halfW, pH);
     cardBorder(doc, rx, pY, halfW, pH);
-    y = Math.max(lpEnd, rpEnd) + gap;
+    y = Math.max(lpEnd, rpEnd) + sp;
   }
 
   // ═══════════════════════════════════════════
-  // 4. BALANCE IVA
+  // 4. BALANCE IVA — stretch to fill remaining space
   // ═══════════════════════════════════════════
+  const footerSpace = 12;
+  const ivaAvailable = ph - y - footerSpace;
+  const ivaH = Math.max(35, ivaAvailable);
+
   const iY = y;
   sectionTitle(doc, m, iY, cw, 'Balance IVA (perspectiva del productor)');
 
@@ -368,11 +370,10 @@ export async function generateProducerPdf(data: PdfData) {
   const ivaEnContra = data.ivaSecado;
   const saldoP = ivaAFavor - ivaEnContra;
 
-  const colW = (cw - 4) / 3;
-  const bY = iY + 7.5;
-  const bH = 11;
+  const colW = (cw - 12) / 3;
+  const bY = iY + 12;
+  const bH = Math.min(ivaH - 16, 22);
 
-  // 3 boxes
   const boxes = [
     { label: 'IVA Facturado (a su favor)', value: `CLP ${fmtClp(ivaAFavor)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
     { label: 'IVA Secado (a favor exportadora)', value: `CLP ${fmtClp(ivaEnContra)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
@@ -380,28 +381,27 @@ export async function generateProducerPdf(data: PdfData) {
   ];
 
   boxes.forEach((b, i) => {
-    const bx = m + 1 + i * (colW + 2);
+    const bx = m + 3 + i * (colW + 6);
     doc.setFillColor(...b.bg);
-    doc.roundedRect(bx, bY, colW, bH, 1, 1, 'F');
-    doc.setFontSize(5);
+    doc.roundedRect(bx, bY, colW, bH, 2, 2, 'F');
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
-    doc.text(b.label, bx + colW / 2, bY + 3.5, { align: 'center' });
-    doc.setFontSize(7.5);
+    doc.text(b.label, bx + colW / 2, bY + bH * 0.3, { align: 'center' });
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...b.color);
-    doc.text(b.value, bx + colW / 2, bY + 8.5, { align: 'center' });
+    doc.text(b.value, bx + colW / 2, bY + bH * 0.7, { align: 'center' });
   });
 
   doc.setTextColor(0, 0, 0);
-  cardBorder(doc, m, iY, cw, bY + bH - iY + 1.5);
-  y = bY + bH + 4;
+  cardBorder(doc, m, iY, cw, bY + bH - iY + 3);
 
   // ── Footer ──
-  doc.setFontSize(5.5);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(150, 150, 150);
-  doc.text('Este documento es un resumen informativo y no constituye un documento tributario.', pw / 2, y, { align: 'center' });
+  doc.text('Este documento es un resumen informativo y no constituye un documento tributario.', pw / 2, ph - 6, { align: 'center' });
 
   doc.save(`Cuenta_Corriente_${data.producer.name.replace(/\s+/g, '_')}_${data.year}.pdf`);
 }
