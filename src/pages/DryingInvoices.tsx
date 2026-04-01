@@ -198,7 +198,7 @@ const DryingInvoices = () => {
                 <TableHead className="text-right">IVA CLP</TableHead>
                 <TableHead className="text-right">TC</TableHead>
                 <TableHead className="text-right">Neto USD</TableHead>
-                <TableHead>Cuotas</TableHead>
+                <TableHead>Método Pago</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>PDF</TableHead>
                 <TableHead className="w-16"></TableHead>
