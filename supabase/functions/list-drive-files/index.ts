@@ -5,10 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function toBase64Url(str: string): string {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
 async function getAccessToken(serviceAccount: any): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({
+  const header = toBase64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+  const payload = toBase64Url(JSON.stringify({
     iss: serviceAccount.client_email,
     scope: 'https://www.googleapis.com/auth/drive.readonly',
     aud: serviceAccount.token_uri,
@@ -19,7 +23,6 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   const encoder = new TextEncoder()
   const signingInput = `${header}.${payload}`
 
-  // Import the private key
   const pemContent = serviceAccount.private_key
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
@@ -54,6 +57,7 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
 
   if (!tokenRes.ok) {
     const err = await tokenRes.text()
+    console.error('Token exchange failed:', err)
     throw new Error(`Token exchange failed: ${err}`)
   }
 
@@ -67,7 +71,17 @@ serve(async (req) => {
   }
 
   try {
-    const { folderId } = await req.json()
+    const body = await req.text()
+    console.log('Request body:', body)
+    
+    let folderId: string
+    try {
+      const parsed = JSON.parse(body)
+      folderId = parsed.folderId
+    } catch (e) {
+      throw new Error(`Invalid JSON body: ${body.substring(0, 50)}`)
+    }
+    
     if (!folderId) throw new Error('folderId is required')
 
     const saJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')
@@ -76,7 +90,6 @@ serve(async (req) => {
     const serviceAccount = JSON.parse(saJson)
     const accessToken = await getAccessToken(serviceAccount)
 
-    // List PDF files in the folder
     const query = `'${folderId}' in parents and mimeType='application/pdf' and trashed=false`
     const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,createdTime,modifiedTime,size)&orderBy=modifiedTime desc&pageSize=100`
 
@@ -86,6 +99,7 @@ serve(async (req) => {
 
     if (!res.ok) {
       const err = await res.text()
+      console.error('Drive API error:', err)
       throw new Error(`Drive API error [${res.status}]: ${err}`)
     }
 
@@ -95,6 +109,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error('Error:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
