@@ -85,6 +85,10 @@ const ProducerAccount = () => {
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
     const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
 
+    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
+    const nextMonthEx = exRates.find(e => e.month === (advances.find(a => !a.paid)?.month ?? 0));
+    const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
+
     // Build per-month discount map
     // Only USD cuotas discount from anticipos
     const discountByMonth: Record<number, number> = {};
@@ -93,11 +97,12 @@ const ProducerAccount = () => {
     if (hasCuotasUsd) {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
-        if (inst && inst.amount_usd) {
+        if (inst && inst.paid && inst.amount_usd) {
+          // Cuota pagada: usar el valor fijo registrado
           discountByMonth[adv.month] = Number(inst.amount_usd);
         } else {
-          const monthEx = exRates.find(e => e.month === adv.month);
-          const tc = monthEx ? Number(monthEx.rate) : fallbackExRate;
+          // Cuota pendiente: usar TC del documento requerido
+          const tc = docExRate;
           discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
         }
       }
