@@ -50,47 +50,35 @@ const ProducerAccount = () => {
     const installmentPayments = instPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
-    // Total facturado por productor (facturas + notas de débito)
     const totalInvoicedUsd = prodInvoices.reduce((s, i) => s + Number(i.amount_usd), 0);
     const totalInvoicedClp = prodInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
-    // Anticipos por mes
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
-      return { month: r.month, centsPerKg: r.cents_per_kg, advance, paid: r.paid };
+      return { month: r.month, centsPerKg: r.cents_per_kg, advance, paid: r.paid, paidDate: (r as any).paid_date };
     }).sort((a, b) => a.month - b.month);
 
     const totalAdvances = advances.reduce((s, a) => s + a.advance, 0);
     const paidAdvances = advances.filter(a => a.paid).reduce((s, a) => s + a.advance, 0);
-
-    // Next advance to pay
     const nextAdvance = advances.find(a => !a.paid);
 
-    // Secado
     const totalDryingUsd = dryInvoices.reduce((s, i) => s + Number(i.amount_usd ?? 0), 0);
     const totalDryingClp = dryInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
-    // Cuota logic - works for all methods
     const method = producer.drying_payment_method;
     const numInstallments = advances.length + 1;
     const cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
 
-    // All installment payments for this producer
     const cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
     const cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
     const cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
     const cuotaDetails = installmentPayments;
 
-    // Fallback exchange rate: last producer invoice's exchange_rate
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
     const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
-
-    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
     const nextMonthEx = exRates.find(e => e.month === (advances.find(a => !a.paid)?.month ?? 0));
     const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
 
-    // Build per-month discount map
-    // Only USD cuotas discount from anticipos
     const discountByMonth: Record<number, number> = {};
     const hasCuotasUsd = dryInvoices.some(inv => inv.installment_currency === 'usd');
 
@@ -98,10 +86,8 @@ const ProducerAccount = () => {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
         if (inst && inst.paid && inst.amount_usd) {
-          // Cuota pagada: usar el valor fijo registrado
           discountByMonth[adv.month] = Number(inst.amount_usd);
         } else {
-          // Cuota pendiente: usar TC del documento requerido
           const tc = docExRate;
           discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
         }
@@ -119,26 +105,20 @@ const ProducerAccount = () => {
       }
     }
 
-    // Next payment detail
     const nextPaymentGross = nextAdvance?.advance ?? 0;
     const nextDiscount = nextAdvance ? (discountByMonth[nextAdvance.month] ?? 0) : 0;
     const nextPaymentNet = nextPaymentGross - nextDiscount;
 
-    // Nota de débito needed?
     const alreadyInvoiced = totalInvoicedUsd;
     const needsDocument = nextPaymentGross > 0 && alreadyInvoiced < totalAdvances;
     const hasInitialInvoice = prodInvoices.some(i => i.document_type === 'factura');
     const docType = hasInitialInvoice ? 'Nota de Débito' : 'Factura';
 
-    // Calculate how much more needs to be invoiced
     const cumulativeAdvancesToNext = advances
       .filter(a => a.month <= (nextAdvance?.month ?? 12))
       .reduce((s, a) => s + a.advance, 0);
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
-    // docExRate already computed above
-
-    // IVA balance
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
     const ivaProductor = prodInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
     const ivaSaldo = ivaSecado - ivaProductor;
@@ -251,12 +231,6 @@ const ProducerAccount = () => {
                     <TableCell className="font-medium">Total Secado CLP</TableCell>
                     <TableCell className="text-right font-bold">CLP {fmtClp(data.totalDryingClp)}</TableCell>
                   </TableRow>
-                  {data.totalDryingUsd > 0 && (
-                    <TableRow>
-                      <TableCell className="font-medium">Total Secado USD</TableCell>
-                      <TableCell className="text-right">USD {fmt(data.totalDryingUsd)}</TableCell>
-                    </TableRow>
-                  )}
                   <TableRow>
                     <TableCell className="font-medium text-green-700">Total Pagado CLP</TableCell>
                     <TableCell className="text-right text-green-700 font-bold">CLP {fmtClp(data.cuotaTotalPaidClp)}</TableCell>
@@ -278,7 +252,7 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-
+          {/* Anticipos */}
           <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Anticipos {year}</CardTitle>
@@ -293,11 +267,12 @@ const ProducerAccount = () => {
                      <TableHead className="text-right">Desc. Secado</TableHead>
                      <TableHead className="text-right">Neto a Pagar</TableHead>
                      <TableHead className="text-center">Estado</TableHead>
+                     <TableHead className="text-center">Fecha Pago</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.advances.length === 0 ? (
-                     <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
                      const net = a.advance - discount;
@@ -313,6 +288,9 @@ const ProducerAccount = () => {
                              {a.paid ? 'Pagado' : 'Pendiente'}
                            </Badge>
                          </TableCell>
+                         <TableCell className="text-center text-sm text-muted-foreground">
+                           {a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-'}
+                         </TableCell>
                        </TableRow>
                      );
                    })}
@@ -326,6 +304,7 @@ const ProducerAccount = () => {
                        <TableCell className="text-center">
                          <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
                        </TableCell>
+                       <TableCell></TableCell>
                      </TableRow>
                    )}
                 </TableBody>
@@ -445,15 +424,15 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* IVA - desde perspectiva del productor */}
+          {/* IVA */}
            <Card className="lg:col-span-2">
              <CardHeader className="pb-3">
                <CardTitle className="text-base">Balance IVA <span className="text-sm font-normal text-muted-foreground">(perspectiva del productor)</span></CardTitle>
              </CardHeader>
              <CardContent>
                {(() => {
-                 const ivaAFavor = data.ivaProductor; // producer invoiced us
-                 const ivaEnContra = data.ivaSecado; // drying IVA they owe
+                 const ivaAFavor = data.ivaProductor;
+                 const ivaEnContra = data.ivaSecado;
                  const saldo = ivaAFavor - ivaEnContra;
                  return (
                  <div className="grid grid-cols-3 gap-4 text-center">

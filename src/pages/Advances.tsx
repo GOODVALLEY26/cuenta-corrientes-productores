@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 type Producer = { id: string; name: string };
-type Rate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; paid: boolean };
+type Rate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; paid: boolean; paid_date: string | null };
 type DryKg = { producer_id: string; dry_kg: number };
 
 const Advances = () => {
@@ -24,6 +25,11 @@ const Advances = () => {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+
+  // Date dialog state
+  const [dateDialogOpen, setDateDialogOpen] = useState(false);
+  const [pendingToggle, setPendingToggle] = useState<{ pid: string; month: number } | null>(null);
+  const [paidDateValue, setPaidDateValue] = useState('');
 
   const load = async () => {
     const [p, r, k] = await Promise.all([
@@ -68,7 +74,26 @@ const Advances = () => {
   const togglePaid = async (pid: string, month: number) => {
     const rate = getRate(pid, month);
     if (!rate) return;
-    await supabase.from('advance_rates').update({ paid: !rate.paid }).eq('id', rate.id);
+
+    if (!rate.paid) {
+      // Marking as paid → ask for date
+      setPendingToggle({ pid, month });
+      setPaidDateValue(new Date().toISOString().slice(0, 10));
+      setDateDialogOpen(true);
+    } else {
+      // Unmarking as paid
+      await supabase.from('advance_rates').update({ paid: false, paid_date: null } as any).eq('id', rate.id);
+      load();
+    }
+  };
+
+  const confirmPaidDate = async () => {
+    if (!pendingToggle) return;
+    const rate = getRate(pendingToggle.pid, pendingToggle.month);
+    if (!rate) return;
+    await supabase.from('advance_rates').update({ paid: true, paid_date: paidDateValue || null } as any).eq('id', rate.id);
+    setDateDialogOpen(false);
+    setPendingToggle(null);
     load();
   };
 
@@ -78,7 +103,6 @@ const Advances = () => {
     return (getKg(pid) * rate.cents_per_kg) / 100;
   };
 
-  // Summary calculations
   const monthTotals = MONTHS.map((_, i) => {
     const month = i + 1;
     const total = producers.reduce((sum, p) => sum + getAdvance(p.id, month), 0);
@@ -154,9 +178,7 @@ const Advances = () => {
                             onClick={() => { setEditingCell(key); setEditValue(rate ? String(rate.cents_per_kg) : ''); }}
                           >
                             {rate ? (
-                              <>
-                                <span className={rate.paid ? 'text-green-600 font-medium' : ''}>{rate.cents_per_kg}</span>
-                              </>
+                              <span className={rate.paid ? 'text-green-600 font-medium' : ''}>{rate.cents_per_kg}</span>
                             ) : (
                               <span className="text-muted-foreground/40">—</span>
                             )}
@@ -221,7 +243,6 @@ const Advances = () => {
                   </TableRow>
                 );
               })}
-              {/* Totals row */}
               <TableRow className="font-bold bg-muted/50">
                 <TableCell className="sticky left-0 bg-muted/50 z-10">Total</TableCell>
                 {monthTotals.map((m, i) => (
@@ -276,6 +297,29 @@ const Advances = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog for paid date */}
+      <Dialog open={dateDialogOpen} onOpenChange={(open) => { if (!open) { setDateDialogOpen(false); setPendingToggle(null); } }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Fecha de Pago</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="paid-date">¿Cuándo se pagó este anticipo?</Label>
+            <Input
+              id="paid-date"
+              type="date"
+              value={paidDateValue}
+              onChange={e => setPaidDateValue(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDateDialogOpen(false); setPendingToggle(null); }}>Cancelar</Button>
+            <Button onClick={confirmPaidDate}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
