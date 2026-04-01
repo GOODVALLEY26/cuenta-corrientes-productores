@@ -9,9 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, FileText, Eye, Loader2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import DriveFileBrowser from '@/components/DriveFileBrowser';
 
 type Producer = { id: string; name: string };
 
