@@ -58,6 +58,24 @@ export type Database = {
           },
         ]
       }
+      app_config: {
+        Row: {
+          created_at: string | null
+          key: string
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          key: string
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       dry_kg_reports: {
         Row: {
           created_at: string
