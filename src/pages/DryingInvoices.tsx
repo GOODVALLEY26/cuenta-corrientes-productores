@@ -13,7 +13,7 @@ import { Plus, Trash2, FileText, Upload, Eye, Loader2, FolderOpen } from 'lucide
 import { toast } from 'sonner';
 import DriveFileBrowser from '@/components/DriveFileBrowser';
 
-type Producer = { id: string; name: string };
+type Producer = { id: string; name: string; rut: string | null };
 
 const STATUS_LABELS: Record<string, string> = { pendiente: 'Pendiente', pagada: 'Pagada', parcial: 'Parcial' };
 const STATUS_COLORS: Record<string, string> = { pendiente: 'destructive', pagada: 'default', parcial: 'secondary' };
