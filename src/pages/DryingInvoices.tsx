@@ -224,9 +224,14 @@ const DryingInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
           <p className="text-muted-foreground">Sube el PDF y el sistema lee Neto + IVA automáticamente</p>
         </div>
-        <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />Agregar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setDriveOpen(true)}>
+            <FolderOpen className="h-4 w-4 mr-2" />Importar de Drive
+          </Button>
+          <Button onClick={() => { setForm({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setDriveBase64(null); setDriveFileName(null); setOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />Agregar
+          </Button>
+        </div>
       </div>
 
       <Card>
