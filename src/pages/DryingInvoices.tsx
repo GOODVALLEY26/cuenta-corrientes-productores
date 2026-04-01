@@ -23,9 +23,12 @@ const DryingInvoices = () => {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [driveOpen, setDriveOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [driveBase64, setDriveBase64] = useState<string | null>(null);
+  const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp' as 'cuotas_usd' | 'cuotas_clp' | 'liquidacion_final', date: new Date().toISOString().split('T')[0], notes: '' });
 
