@@ -284,50 +284,6 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* Pago Cuota de Secado */}
-          {data.cuotaDetails.length > 0 && (
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Pago Cuota de Secado</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cuota</TableHead>
-                      <TableHead>Mes</TableHead>
-                      <TableHead className="text-right">Monto CLP</TableHead>
-                      <TableHead className="text-right">TC</TableHead>
-                      <TableHead className="text-right">Monto USD</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
-                      <TableHead>Fecha Pago</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.cuotaDetails.map((inst: any, idx: number) => {
-                      const tc = inst.paid && inst.exchange_rate ? Number(inst.exchange_rate) : data.docExRate;
-                      const usd = tc ? Number(inst.amount_clp) / tc : null;
-                      return (
-                        <TableRow key={inst.id}>
-                          <TableCell className="font-medium">{inst.installment_number}/{data.cuotaDetails.length}</TableCell>
-                          <TableCell>{inst.month && inst.month <= 12 ? MONTHS_FULL[inst.month - 1] : `Mes ${inst.month}`}</TableCell>
-                          <TableCell className="text-right">CLP {fmtClp(Number(inst.amount_clp))}</TableCell>
-                          <TableCell className="text-right">{tc ? `$${Number(tc).toLocaleString('es-CL')}` : '-'}</TableCell>
-                          <TableCell className="text-right">{inst.paid && inst.amount_usd ? `USD ${fmt(Number(inst.amount_usd))}` : usd ? `USD ${fmt(usd)}` : '-'}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={inst.paid ? 'default' : 'outline'} className={inst.paid ? 'bg-green-600' : ''}>
-                              {inst.paid ? 'Pagado' : 'Pendiente'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('es-CL') : '-'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
 
           <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
