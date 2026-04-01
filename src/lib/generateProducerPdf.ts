@@ -136,11 +136,11 @@ export async function generateProducerPdf(data: PdfData) {
   doc.setTextColor(0, 0, 0);
   y = 45;
 
-  const sp = 5; // spacing between sections
-  const halfW = (cw - 6) / 2;
+  const sp = 4;
+  const halfW = (cw - 5) / 2;
   const lx = m;
-  const rx = m + halfW + 6;
-  const fs = 8.5;
+  const rx = m + halfW + 5;
+  const fs = 8;
   const cp = 2.5;
 
   // ═══════════════════════════════════════════
