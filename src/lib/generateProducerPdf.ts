@@ -286,9 +286,10 @@ export async function generateProducerPdf(data: PdfData) {
 
     autoTable(doc, {
       startY: lpY,
-      margin: { left: lx + 2, right: pw - lx - halfW + 2 },
+      margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
+      tableWidth: halfW - 4,
       theme: 'plain',
-      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
       body: payRows,
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
       didParseCell: (h) => {
