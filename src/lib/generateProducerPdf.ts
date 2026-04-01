@@ -12,7 +12,7 @@ interface PdfData {
   dryKg: number;
   totalInvoicedUsd: number;
   totalInvoicedClp: number;
-  advances: { month: number; centsPerKg: number; advance: number; paid: boolean }[];
+  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null }[];
   totalAdvances: number;
   paidAdvances: number;
   nextAdvance: { month: number; centsPerKg: number; advance: number } | null;
@@ -45,44 +45,25 @@ const methodLabel: Record<string, string> = {
   cuotas: 'Cuotas',
 };
 
-// Purple theme colors (from Goodvalley logo)
-const PRIMARY: [number, number, number] = [75, 0, 110];       // Deep purple
-const HEADER_BG: [number, number, number] = [75, 0, 110];
+// Purple theme
+const PRIMARY: [number, number, number] = [75, 0, 110];
+const PURPLE_LIGHT: [number, number, number] = [120, 60, 160];
 const ACCENT_GREEN: [number, number, number] = [22, 163, 74];
 const ACCENT_RED: [number, number, number] = [220, 38, 38];
-const MUTED_BG: [number, number, number] = [245, 240, 250];   // Light purple tint
-const BORDER: [number, number, number] = [180, 160, 200];
-const WHITE: [number, number, number] = [255, 255, 255];
+const MUTED_BG: [number, number, number] = [245, 240, 250];
 const CARD_BORDER: [number, number, number] = [200, 180, 220];
-const PURPLE_LIGHT: [number, number, number] = [120, 60, 160];
+const WHITE: [number, number, number] = [255, 255, 255];
 
-function drawCardBox(doc: jsPDF, x: number, y: number, w: number, h: number, title: string): number {
-  // Card border
-  doc.setDrawColor(...CARD_BORDER);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(x, y, w, h, 2, 2, 'S');
-
-  // Title bar
+function drawSectionTitle(doc: jsPDF, x: number, y: number, w: number, title: string): number {
   doc.setFillColor(...PRIMARY);
-  doc.roundedRect(x, y, w, 9, 2, 2, 'F');
-  // Cover bottom corners of title bar
-  doc.rect(x, y + 5, w, 4, 'F');
-
-  doc.setFontSize(9);
+  doc.roundedRect(x, y, w, 7, 1.5, 1.5, 'F');
+  doc.rect(x, y + 4, w, 3, 'F');
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(title, x + 4, y + 6.2);
+  doc.text(title, x + 3, y + 5);
   doc.setTextColor(0, 0, 0);
-
-  return y + 11;
-}
-
-function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
-  if (y + needed > 255) {
-    doc.addPage();
-    return 20;
-  }
-  return y;
+  return y + 8;
 }
 
 async function loadLogoAsBase64(): Promise<string | null> {
@@ -102,149 +83,135 @@ async function loadLogoAsBase64(): Promise<string | null> {
 
 export async function generateProducerPdf(data: PdfData) {
   const doc = new jsPDF('p', 'mm', 'letter');
-  const pageWidth = doc.internal.pageSize.getWidth();
+  const pw = doc.internal.pageSize.getWidth(); // ~216
+  const margin = 12;
+  const contentW = pw - margin * 2;
   let y = 0;
 
-  // ── Header with logo ──
-  doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pageWidth, 36, 'F');
-
-  // Load and add logo
+  // ── HEADER ──
   const logoBase64 = await loadLogoAsBase64();
+  doc.setFillColor(...PRIMARY);
+  doc.rect(0, 0, pw, 28, 'F');
+
   if (logoBase64) {
-    // White circle/box behind logo for contrast
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(12, 4, 42, 28, 3, 3, 'F');
-    doc.addImage(logoBase64, 'PNG', 14, 6, 38, 24);
+    doc.roundedRect(margin, 3, 32, 22, 2, 2, 'F');
+    doc.addImage(logoBase64, 'PNG', margin + 1, 4, 30, 20);
   }
 
-  // Title text
-  doc.setFontSize(17);
+  const titleX = logoBase64 ? 50 : pw / 2;
+  const titleAlign: any = logoBase64 ? 'left' : 'center';
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  const titleX = logoBase64 ? 60 : pageWidth / 2;
-  const titleAlign = logoBase64 ? 'left' : 'center';
-  doc.text('Cuenta Corriente Productor', titleX, 16, { align: titleAlign as any });
-  doc.setFontSize(11);
+  doc.text('Cuenta Corriente Productor', titleX, 12, { align: titleAlign });
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Temporada ${data.year}`, titleX, 24, { align: titleAlign as any });
-
-  // Emission date in header
-  doc.setFontSize(8);
+  doc.text(`Temporada ${data.year}`, titleX, 18, { align: titleAlign });
+  doc.setFontSize(7);
   doc.setTextColor(220, 200, 240);
   const today = new Date();
-  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, titleX, 31, { align: titleAlign as any });
-
+  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, titleX, 23, { align: titleAlign });
   doc.setTextColor(0, 0, 0);
-  y = 42;
 
-  // ── Producer info row ──
+  // Producer info bar
+  y = 30;
   doc.setFillColor(...MUTED_BG);
-  doc.roundedRect(15, y, pageWidth - 30, 10, 2, 2, 'F');
-  doc.setFontSize(11);
+  doc.roundedRect(margin, y, contentW, 8, 1.5, 1.5, 'F');
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...PRIMARY);
-  doc.text(data.producer.name, 20, y + 6.5);
+  doc.text(data.producer.name, margin + 3, y + 5.5);
   if (data.producer.rut) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`RUT: ${data.producer.rut}`, pageWidth - 20, y + 6.5, { align: 'right' });
+    doc.text(`RUT: ${data.producer.rut}`, pw - margin - 3, y + 5.5, { align: 'right' });
   }
   doc.setTextColor(0, 0, 0);
-  y += 16;
+  y = 41;
 
   // ═══════════════════════════════════════════
-  // 1. FACTURACIÓN TOTAL & SECADO (side by side cards)
+  // 1. FACTURACIÓN & SECADO (side by side)
   // ═══════════════════════════════════════════
-  const halfW = (pageWidth - 30 - 6) / 2;
-  const cardH1 = 42;
+  const halfW = (contentW - 4) / 2;
+  const leftX = margin;
+  const rightX = margin + halfW + 4;
 
-  // Left card: Facturación Total
-  const leftCardY = y;
-  drawCardBox(doc, 15, leftCardY, halfW, cardH1, 'Facturación Total');
-
+  // Left: Facturación Total
+  let leftY = drawSectionTitle(doc, leftX, y, halfW, 'Facturación Total');
   autoTable(doc, {
-    startY: leftCardY + 11,
-    margin: { left: 17, right: pageWidth - 13 - halfW },
+    startY: leftY,
+    margin: { left: leftX + 1, right: pw - leftX - halfW + 1 },
     theme: 'plain',
-    styles: { fontSize: 8.5, cellPadding: 2, textColor: [50, 50, 50] },
+    styles: { fontSize: 7, cellPadding: 1.5, textColor: [50, 50, 50] },
     body: [
       ['Kg Secos Totales', `${Number(data.dryKg).toLocaleString('es-CL')} kg`],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
-      ['Método Pago Secado', methodLabel[data.method] ?? data.method],
     ],
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 38 },
-      1: { halign: 'right' },
-    },
-    didParseCell: (hookData) => {
-      if (hookData.row.index === 1 && hookData.column.index === 1 && hookData.section === 'body') {
-        hookData.cell.styles.fontStyle = 'bold';
-        hookData.cell.styles.textColor = [...PRIMARY];
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32 }, 1: { halign: 'right' } },
+    didParseCell: (h) => {
+      if (h.row.index === 1 && h.column.index === 1 && h.section === 'body') {
+        h.cell.styles.fontStyle = 'bold';
+        h.cell.styles.textColor = [...PRIMARY];
       }
     },
   });
+  const leftEnd = (doc as any).lastAutoTable.finalY;
 
-  // Right card: Secado
-  const rightX = 15 + halfW + 6;
-  drawCardBox(doc, rightX, leftCardY, halfW, cardH1, 'Secado');
-
-  const secadoBody: string[][] = [
+  // Right: Secado
+  let rightY = drawSectionTitle(doc, rightX, y, halfW, 'Secado');
+  const secadoRows: string[][] = [
     ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
+    ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
+    ['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`],
+    ['Método pago', methodLabel[data.method] ?? data.method],
   ];
-  if (data.totalDryingUsd > 0) {
-    secadoBody.push(['Total Secado USD', `USD ${fmt(data.totalDryingUsd)}`]);
-  }
-  if (data.method === 'cuotas' && data.cuotaClp) {
-    secadoBody.push(['Cuota mensual CLP', `CLP ${fmtClp(data.cuotaClp)}`]);
-    secadoBody.push(['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`]);
-    secadoBody.push(['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`]);
-  } else if (data.method === 'descuento_usd') {
-    const firstDiscount = Object.values(data.discountByMonth)[0] ?? 0;
-    secadoBody.push(['Desc. mensual', `USD ${fmt(firstDiscount)}`]);
-  } else {
-    secadoBody.push(['Descuento', 'No aplica']);
-  }
 
   autoTable(doc, {
-    startY: leftCardY + 11,
-    margin: { left: rightX + 2, right: 17 },
+    startY: rightY,
+    margin: { left: rightX + 1, right: pw - rightX - halfW + 1 },
     theme: 'plain',
-    styles: { fontSize: 8.5, cellPadding: 2, textColor: [50, 50, 50] },
-    body: secadoBody,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 38 },
-      1: { halign: 'right' },
-    },
-    didParseCell: (hookData) => {
-      if (hookData.section === 'body') {
-        const label = String(hookData.row.raw?.[0] ?? '');
-        if (label.includes('Pagado')) {
-          hookData.cell.styles.textColor = [...ACCENT_GREEN];
+    styles: { fontSize: 7, cellPadding: 1.5, textColor: [50, 50, 50] },
+    body: secadoRows,
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32 }, 1: { halign: 'right' } },
+    didParseCell: (h) => {
+      if (h.section === 'body') {
+        const label = String(h.row.raw?.[0] ?? '');
+        if (label === 'Total Pagado CLP' && h.column.index === 1) {
+          h.cell.styles.textColor = [...ACCENT_GREEN];
         }
         if (label === 'Saldo CLP') {
-          hookData.cell.styles.fontStyle = 'bold';
+          h.cell.styles.fontStyle = 'bold';
           const saldo = data.cuotaSaldoClp ?? 0;
-          hookData.cell.styles.textColor = saldo > 0 ? [...ACCENT_RED] : [...ACCENT_GREEN];
+          h.cell.styles.textColor = saldo > 0 ? [...ACCENT_RED] : [...ACCENT_GREEN];
+        }
+        if (label === 'Total Secado CLP' && h.column.index === 1) {
+          h.cell.styles.fontStyle = 'bold';
         }
       }
     },
   });
+  const rightEnd = (doc as any).lastAutoTable.finalY;
 
-  y = leftCardY + cardH1 + 6;
+  // Draw borders around both cards
+  const cardH = Math.max(leftEnd, rightEnd) - y + 1;
+  doc.setDrawColor(...CARD_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(leftX, y, halfW, cardH, 1.5, 1.5, 'S');
+  doc.roundedRect(rightX, y, halfW, cardH, 1.5, 1.5, 'S');
+
+  y = Math.max(leftEnd, rightEnd) + 4;
 
   // ═══════════════════════════════════════════
-  // 2. ANTICIPOS TABLE (full width card)
+  // 2. ANTICIPOS TABLE
   // ═══════════════════════════════════════════
-  y = checkPageBreak(doc, y, 50);
-
-  const showDiscount = data.method === 'descuento_usd' || data.method === 'cuotas';
+  const showDiscount = Object.values(data.discountByMonth).some(v => v > 0);
 
   const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
   if (showDiscount) advHeaders.push('Desc. Secado', 'Neto USD');
-  advHeaders.push('Estado');
+  advHeaders.push('Estado', 'Fecha Pago');
 
   const advRows = data.advances.map(a => {
     const discount = data.discountByMonth[a.month] ?? 0;
@@ -259,6 +226,7 @@ export async function generateProducerPdf(data: PdfData) {
       row.push(`USD ${fmt(net)}`);
     }
     row.push(a.paid ? '✓ Pagado' : 'Pendiente');
+    row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
     return row;
   });
 
@@ -266,34 +234,21 @@ export async function generateProducerPdf(data: PdfData) {
   const totalRow: string[] = ['TOTAL', '', `USD ${fmt(data.totalAdvances)}`];
   if (showDiscount) totalRow.push('', '');
   totalRow.push(`Pagado: USD ${fmt(data.paidAdvances)}`);
+  totalRow.push('');
   advRows.push(totalRow);
 
-  // Estimate card height for anticipos
-  const anticiposCardH = 14 + advRows.length * 7.5;
   const anticiposY = y;
+  drawSectionTitle(doc, margin, anticiposY, contentW, `Anticipos ${data.year}`);
 
-  // Draw card border
-  doc.setDrawColor(...CARD_BORDER);
-  doc.setLineWidth(0.5);
-  // We'll draw after the table to know exact height
-
-  // Title bar
-  doc.setFillColor(...PRIMARY);
-  const titleBarH = 9;
-  doc.roundedRect(15, anticiposY, pageWidth - 30, titleBarH, 2, 2, 'F');
-  doc.rect(15, anticiposY + 5, pageWidth - 30, 4, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text(`Anticipos ${data.year}`, 19, anticiposY + 6.2);
-  doc.setTextColor(0, 0, 0);
+  const lastCol = showDiscount ? 6 : 4;
+  const statusCol = showDiscount ? 5 : 3;
 
   autoTable(doc, {
-    startY: anticiposY + titleBarH + 1,
-    margin: { left: 16, right: 16 },
+    startY: anticiposY + 8,
+    margin: { left: margin + 1, right: margin + 1 },
     theme: 'grid',
-    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 7.5, halign: 'center', textColor: [255, 255, 255] },
-    styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.3 },
+    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 6.5, halign: 'center', textColor: [255, 255, 255], cellPadding: 1.5 },
+    styles: { fontSize: 6.5, cellPadding: 1.5, lineColor: [...CARD_BORDER], lineWidth: 0.2 },
     head: [advHeaders],
     body: advRows,
     columnStyles: {
@@ -304,49 +259,41 @@ export async function generateProducerPdf(data: PdfData) {
         3: { halign: 'right', textColor: [...ACCENT_RED] },
         4: { halign: 'right', fontStyle: 'bold' },
         5: { halign: 'center' },
+        6: { halign: 'center' },
       } : {
         3: { halign: 'center' },
+        4: { halign: 'center' },
       }),
     },
-    didParseCell: (hookData) => {
-      if (hookData.section === 'body') {
-        if (hookData.row.index === advRows.length - 1) {
-          hookData.cell.styles.fontStyle = 'bold';
-          hookData.cell.styles.fillColor = [...MUTED_BG];
+    didParseCell: (h) => {
+      if (h.section === 'body') {
+        if (h.row.index === advRows.length - 1) {
+          h.cell.styles.fontStyle = 'bold';
+          h.cell.styles.fillColor = [...MUTED_BG];
         }
-        const lastCol = showDiscount ? 5 : 3;
-        if (hookData.column.index === lastCol) {
-          const val = String(hookData.cell.raw);
-          if (val.includes('Pagado')) {
-            hookData.cell.styles.textColor = [...ACCENT_GREEN];
-          }
+        if (h.column.index === statusCol) {
+          const val = String(h.cell.raw);
+          if (val.includes('Pagado')) h.cell.styles.textColor = [...ACCENT_GREEN];
         }
       }
     },
   });
 
   const anticiposEnd = (doc as any).lastAutoTable.finalY;
-  // Draw card border around the whole thing
   doc.setDrawColor(...CARD_BORDER);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(15, anticiposY, pageWidth - 30, anticiposEnd - anticiposY + 2, 2, 2, 'S');
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, anticiposY, contentW, anticiposEnd - anticiposY + 1, 1.5, 1.5, 'S');
 
-  y = anticiposEnd + 8;
+  y = anticiposEnd + 4;
 
   // ═══════════════════════════════════════════
-  // 3. PRÓXIMO PAGO & DOCUMENTO REQUERIDO (side by side cards)
+  // 3. PRÓXIMO PAGO & DOCUMENTO REQUERIDO (side by side)
   // ═══════════════════════════════════════════
-  y = checkPageBreak(doc, y, 55);
-
   if (data.nextAdvance) {
-    const cardH2Left = 38;
-    const cardH2Right = data.needsDocument ? 52 : 22;
-    const cardH2 = Math.max(cardH2Left, cardH2Right);
     const pairY = y;
 
     // Left: Próximo Pago
-    drawCardBox(doc, 15, pairY, halfW, cardH2, 'Próximo Pago');
-
+    let lpY = drawSectionTitle(doc, leftX, pairY, halfW, 'Próximo Pago');
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
     const paymentRows: string[][] = [
       ['Mes', nextMonth],
@@ -358,247 +305,165 @@ export async function generateProducerPdf(data: PdfData) {
     paymentRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
 
     autoTable(doc, {
-      startY: pairY + 11,
-      margin: { left: 17, right: pageWidth - 13 - halfW },
+      startY: lpY,
+      margin: { left: leftX + 1, right: pw - leftX - halfW + 1 },
       theme: 'plain',
-      styles: { fontSize: 8.5, cellPadding: 2.5, textColor: [50, 50, 50] },
+      styles: { fontSize: 7, cellPadding: 1.5, textColor: [50, 50, 50] },
       body: paymentRows,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 35 },
-        1: { halign: 'right' },
-      },
-      didParseCell: (hookData) => {
-        if (hookData.section === 'body') {
-          const label = String(hookData.row.raw?.[0] ?? '');
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
+      didParseCell: (h) => {
+        if (h.section === 'body') {
+          const label = String(h.row.raw?.[0] ?? '');
           if (label === 'Neto a Pagar') {
-            hookData.cell.styles.fontStyle = 'bold';
-            hookData.cell.styles.fillColor = [...MUTED_BG];
-            hookData.cell.styles.fontSize = 10;
-            hookData.cell.styles.textColor = [...PRIMARY];
+            h.cell.styles.fontStyle = 'bold';
+            h.cell.styles.fillColor = [...MUTED_BG];
+            h.cell.styles.fontSize = 8;
+            h.cell.styles.textColor = [...PRIMARY];
           }
-          if (label.includes('Desc')) {
-            hookData.cell.styles.textColor = [...ACCENT_RED];
-          }
+          if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
         }
       },
     });
+    const lpEnd = (doc as any).lastAutoTable.finalY;
 
     // Right: Documento Requerido
-    drawCardBox(doc, rightX, pairY, halfW, cardH2, data.needsDocument ? 'Documento Requerido' : 'Documento');
+    let rpY = drawSectionTitle(doc, rightX, pairY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
 
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito'
         ? `Ajuste precio anticipo ${nextMonth}`
         : `Anticipo compra fruta ${data.year}`;
-
       const tc = data.docExRate;
       const docRows: string[][] = [
         ['Tipo', data.docType],
         ['Glosa', glosa],
-        ['Fecha', `${nextMonth} ${data.year}`],
         ['Neto USD', `USD ${fmt(data.docNeededUsd)}`],
       ];
       if (tc) {
         const montoCLP = data.docNeededUsd * tc;
         const iva = montoCLP * 0.19;
-        docRows.push(['Tipo de Cambio', `$${Number(tc).toLocaleString('es-CL')}`]);
+        docRows.push(['T.C.', `$${Number(tc).toLocaleString('es-CL')}`]);
         docRows.push(['Neto CLP', `CLP ${fmtClp(Math.round(montoCLP))}`]);
         docRows.push(['IVA (19%)', `CLP ${fmtClp(Math.round(iva))}`]);
         docRows.push(['Total Doc.', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
       }
 
       autoTable(doc, {
-        startY: pairY + 11,
-        margin: { left: rightX + 2, right: 17 },
+        startY: rpY,
+        margin: { left: rightX + 1, right: pw - rightX - halfW + 1 },
         theme: 'plain',
-        styles: { fontSize: 8.5, cellPadding: 2.5, textColor: [50, 50, 50] },
+        styles: { fontSize: 7, cellPadding: 1.5, textColor: [50, 50, 50] },
         body: docRows,
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 32 },
-          1: { halign: 'right' },
-        },
-        didParseCell: (hookData) => {
-          if (hookData.section === 'body') {
-            const label = String(hookData.row.raw?.[0] ?? '');
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 1: { halign: 'right' } },
+        didParseCell: (h) => {
+          if (h.section === 'body') {
+            const label = String(h.row.raw?.[0] ?? '');
             if (label === 'Total Doc.') {
-              hookData.cell.styles.fontStyle = 'bold';
-              hookData.cell.styles.fillColor = [...MUTED_BG];
-              hookData.cell.styles.textColor = [...PRIMARY];
+              h.cell.styles.fontStyle = 'bold';
+              h.cell.styles.fillColor = [...MUTED_BG];
+              h.cell.styles.textColor = [...PRIMARY];
             }
             if (label === 'Tipo') {
-              hookData.cell.styles.textColor = [...ACCENT_RED];
-              hookData.cell.styles.fontStyle = 'bold';
+              h.cell.styles.textColor = [...ACCENT_RED];
+              h.cell.styles.fontStyle = 'bold';
             }
           }
         },
       });
     } else {
       autoTable(doc, {
-        startY: pairY + 11,
-        margin: { left: rightX + 2, right: 17 },
+        startY: rpY,
+        margin: { left: rightX + 1, right: pw - rightX - halfW + 1 },
         theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [50, 50, 50] },
         body: [['Facturación al día ✓']],
-        didParseCell: (hookData) => {
-          hookData.cell.styles.textColor = [...ACCENT_GREEN];
-          hookData.cell.styles.fontStyle = 'bold';
-          hookData.cell.styles.halign = 'center';
+        didParseCell: (h) => {
+          h.cell.styles.textColor = [...ACCENT_GREEN];
+          h.cell.styles.fontStyle = 'bold';
+          h.cell.styles.halign = 'center';
         },
       });
     }
+    const rpEnd = (doc as any).lastAutoTable.finalY;
 
-    y = pairY + cardH2 + 8;
-  }
-
-  // ═══════════════════════════════════════════
-  // 4. CUOTAS DETAIL (if cuotas method)
-  // ═══════════════════════════════════════════
-  if (data.method === 'cuotas' && data.cuotaDetails && data.cuotaDetails.length > 0) {
-    y = checkPageBreak(doc, y, 40);
-
-    const cuotasY = y;
-    doc.setFillColor(...PRIMARY);
-    doc.roundedRect(15, cuotasY, pageWidth - 30, 9, 2, 2, 'F');
-    doc.rect(15, cuotasY + 5, pageWidth - 30, 4, 'F');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('Detalle Cuotas Secado', 19, cuotasY + 6.2);
-    doc.setTextColor(0, 0, 0);
-
-    const cuotaHeaders = ['#', 'Mes', 'Monto CLP', 'TC', 'Monto USD', 'Estado', 'Fecha Pago'];
-    const cuotaRows = data.cuotaDetails
-      .sort((a: any, b: any) => a.installment_number - b.installment_number)
-      .map((inst: any) => [
-        String(inst.installment_number),
-        inst.month && inst.month <= 12 ? MONTHS_FULL[inst.month - 1] : `Mes ${inst.month}`,
-        `CLP ${fmtClp(Number(inst.amount_clp))}`,
-        inst.exchange_rate ? `$${Number(inst.exchange_rate).toLocaleString('es-CL')}` : '-',
-        inst.amount_usd ? `USD ${fmt(Number(inst.amount_usd))}` : '-',
-        inst.paid ? '✓ Pagado' : 'Pendiente',
-        inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('es-CL') : '-',
-      ]);
-
-    autoTable(doc, {
-      startY: cuotasY + 10,
-      margin: { left: 16, right: 16 },
-      theme: 'grid',
-      headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 7.5, halign: 'center', textColor: [255, 255, 255] },
-      styles: { fontSize: 7.5, cellPadding: 2, lineColor: [...CARD_BORDER], lineWidth: 0.3 },
-      head: [cuotaHeaders],
-      body: cuotaRows,
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'center' },
-        6: { halign: 'center' },
-      },
-      didParseCell: (hookData) => {
-        if (hookData.section === 'body' && hookData.column.index === 5) {
-          const val = String(hookData.cell.raw);
-          if (val.includes('Pagado')) {
-            hookData.cell.styles.textColor = [...ACCENT_GREEN];
-          }
-        }
-      },
-    });
-
-    const cuotasEnd = (doc as any).lastAutoTable.finalY;
+    const pairH = Math.max(lpEnd, rpEnd) - pairY + 1;
     doc.setDrawColor(...CARD_BORDER);
-    doc.setLineWidth(0.5);
-    doc.roundedRect(15, cuotasY, pageWidth - 30, cuotasEnd - cuotasY + 2, 2, 2, 'S');
+    doc.setLineWidth(0.3);
+    doc.roundedRect(leftX, pairY, halfW, pairH, 1.5, 1.5, 'S');
+    doc.roundedRect(rightX, pairY, halfW, pairH, 1.5, 1.5, 'S');
 
-    y = cuotasEnd + 8;
+    y = Math.max(lpEnd, rpEnd) + 4;
   }
 
   // ═══════════════════════════════════════════
-  // 5. BALANCE IVA (full width card)
+  // 4. BALANCE IVA
   // ═══════════════════════════════════════════
-  y = checkPageBreak(doc, y, 40);
-
-  const ivaCardY = y;
-  const ivaCardH = 32;
-
-  // Card with title
-  doc.setDrawColor(...CARD_BORDER);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(15, ivaCardY, pageWidth - 30, ivaCardH, 2, 2, 'S');
-
-  doc.setFillColor(...PRIMARY);
-  doc.roundedRect(15, ivaCardY, pageWidth - 30, 9, 2, 2, 'F');
-  doc.rect(15, ivaCardY + 5, pageWidth - 30, 4, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Balance IVA (perspectiva del productor)', 19, ivaCardY + 6.2);
-  doc.setTextColor(0, 0, 0);
+  const ivaY = y;
+  drawSectionTitle(doc, margin, ivaY, contentW, 'Balance IVA (perspectiva del productor)');
 
   const ivaAFavor = data.ivaProductor;
   const ivaEnContra = data.ivaSecado;
   const saldoProductor = ivaAFavor - ivaEnContra;
 
-  const colW = (pageWidth - 36) / 3;
-  const boxY = ivaCardY + 12;
-  const boxH = 16;
+  const colW = (contentW - 6) / 3;
+  const boxY = ivaY + 9;
+  const boxH = 12;
 
   // IVA a favor
   doc.setFillColor(...MUTED_BG);
-  doc.roundedRect(18, boxY, colW - 2, boxH, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(margin + 1, boxY, colW, boxH, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text('IVA Facturado (a su favor)', 18 + (colW - 2) / 2, boxY + 5, { align: 'center' });
-  doc.setFontSize(10);
+  doc.text('IVA Facturado (a su favor)', margin + 1 + colW / 2, boxY + 4, { align: 'center' });
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(`CLP ${fmtClp(ivaAFavor)}`, 18 + (colW - 2) / 2, boxY + 12, { align: 'center' });
+  doc.text(`CLP ${fmtClp(ivaAFavor)}`, margin + 1 + colW / 2, boxY + 9.5, { align: 'center' });
 
   // IVA secado
   doc.setFillColor(...MUTED_BG);
-  doc.roundedRect(18 + colW, boxY, colW - 2, boxH, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(margin + 1 + colW + 3, boxY, colW, boxH, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('IVA Secado (a favor exportadora)', 18 + colW + (colW - 2) / 2, boxY + 5, { align: 'center' });
-  doc.setFontSize(10);
+  doc.text('IVA Secado (a favor exportadora)', margin + 1 + colW + 3 + colW / 2, boxY + 4, { align: 'center' });
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text(`CLP ${fmtClp(ivaEnContra)}`, 18 + colW + (colW - 2) / 2, boxY + 12, { align: 'center' });
+  doc.text(`CLP ${fmtClp(ivaEnContra)}`, margin + 1 + colW + 3 + colW / 2, boxY + 9.5, { align: 'center' });
 
   // Saldo
   const saldoColor = saldoProductor >= 0 ? ACCENT_GREEN : ACCENT_RED;
   doc.setFillColor(saldoProductor >= 0 ? 230 : 255, saldoProductor >= 0 ? 245 : 235, saldoProductor >= 0 ? 230 : 235);
-  doc.roundedRect(18 + colW * 2, boxY, colW - 2, boxH, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(margin + 1 + (colW + 3) * 2, boxY, colW, boxH, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('Saldo IVA Neto', 18 + colW * 2 + (colW - 2) / 2, boxY + 5, { align: 'center' });
-  doc.setFontSize(10);
+  doc.text('Saldo IVA Neto', margin + 1 + (colW + 3) * 2 + colW / 2, boxY + 4, { align: 'center' });
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...saldoColor);
-  const saldoLabel = saldoProductor > 0 ? '(a favor productor)' : saldoProductor < 0 ? '(a favor exportadora)' : '';
-  doc.text(`CLP ${fmtClp(saldoProductor)}`, 18 + colW * 2 + (colW - 2) / 2, boxY + 11, { align: 'center' });
-  if (saldoLabel) {
-    doc.setFontSize(5.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(saldoLabel, 18 + colW * 2 + (colW - 2) / 2, boxY + 15, { align: 'center' });
-  }
+  doc.text(`CLP ${fmtClp(saldoProductor)}`, margin + 1 + (colW + 3) * 2 + colW / 2, boxY + 9.5, { align: 'center' });
 
   doc.setTextColor(0, 0, 0);
-  y = ivaCardY + ivaCardH + 8;
+
+  // Card border for IVA
+  doc.setDrawColor(...CARD_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, ivaY, contentW, boxY + boxH - ivaY + 2, 1.5, 1.5, 'S');
+
+  y = boxY + boxH + 5;
 
   // ── Footer ──
-  doc.setDrawColor(...BORDER);
-  doc.setLineWidth(0.3);
-  doc.line(15, y, pageWidth - 15, y);
-  y += 5;
-  doc.setFontSize(7);
+  doc.setDrawColor(...CARD_BORDER);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y, pw - margin, y);
+  y += 3;
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(140, 140, 140);
-  doc.text('Este documento es un resumen informativo de la cuenta corriente y no constituye un documento tributario.', pageWidth / 2, y, { align: 'center' });
+  doc.text('Este documento es un resumen informativo de la cuenta corriente y no constituye un documento tributario.', pw / 2, y, { align: 'center' });
 
-  // Save
   doc.save(`Cuenta_Corriente_${data.producer.name.replace(/\s+/g, '_')}_${data.year}.pdf`);
 }
