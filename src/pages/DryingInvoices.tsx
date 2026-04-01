@@ -34,7 +34,7 @@ const DryingInvoices = () => {
 
   const load = async () => {
     const [p, i] = await Promise.all([
-      supabase.from('producers').select('id, name').order('name'),
+      supabase.from('producers').select('id, name, rut').order('name'),
       supabase.from('drying_invoices').select('*, producers(name)').order('date', { ascending: false }),
     ]);
     if (p.data) setProducers(p.data);
