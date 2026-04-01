@@ -13,7 +13,7 @@ import { Plus, Trash2, FileText, Upload, Eye, Loader2, FolderOpen } from 'lucide
 import { toast } from 'sonner';
 import DriveFileBrowser from '@/components/DriveFileBrowser';
 
-type Producer = { id: string; name: string };
+type Producer = { id: string; name: string; rut: string | null };
 
 const STATUS_LABELS: Record<string, string> = { pendiente: 'Pendiente', pagada: 'Pagada', parcial: 'Parcial' };
 const STATUS_COLORS: Record<string, string> = { pendiente: 'destructive', pagada: 'default', parcial: 'secondary' };
@@ -34,7 +34,7 @@ const DryingInvoices = () => {
 
   const load = async () => {
     const [p, i] = await Promise.all([
-      supabase.from('producers').select('id, name').order('name'),
+      supabase.from('producers').select('id, name, rut').order('name'),
       supabase.from('drying_invoices').select('*, producers(name)').order('date', { ascending: false }),
     ]);
     if (p.data) setProducers(p.data);
@@ -66,22 +66,28 @@ const DryingInvoices = () => {
       }
 
       let producerId = '';
-      if (parsed.producer_name) {
-        const match = producers.find(p =>
-          p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
-          parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
-        );
+      if (parsed.producer_name || parsed.producer_rut) {
+        const rutNorm = parsed.producer_rut?.replace(/[.\s]/g, '').toLowerCase() || '';
+        const match = producers.find(p => {
+          if (rutNorm && p.rut) {
+            return p.rut.replace(/[.\s]/g, '').toLowerCase() === rutNorm;
+          }
+          return parsed.producer_name && (
+            p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
+            parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
+          );
+        });
         if (match) {
           producerId = match.id;
-        } else if (user) {
+        } else if (user && parsed.producer_name) {
           const { data: newProducer, error: createErr } = await supabase
             .from('producers')
-            .insert({ name: parsed.producer_name, user_id: user.id })
-            .select('id, name')
+            .insert({ name: parsed.producer_name, rut: parsed.producer_rut || null, user_id: user.id })
+            .select('id, name, rut')
             .single();
           if (!createErr && newProducer) {
             producerId = newProducer.id;
-            setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name }].sort((a, b) => a.name.localeCompare(b.name)));
+            setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name, rut: newProducer.rut }].sort((a, b) => a.name.localeCompare(b.name)));
             toast.info(`Productor "${newProducer.name}" creado automáticamente`);
           }
         }
@@ -173,22 +179,28 @@ const DryingInvoices = () => {
 
   const handleDriveImport = async (parsed: any) => {
     let producerId = '';
-    if (parsed.producer_name) {
-      const match = producers.find(p =>
-        p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
-        parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
-      );
+    if (parsed.producer_name || parsed.producer_rut) {
+      const rutNorm = parsed.producer_rut?.replace(/[.\s]/g, '').toLowerCase() || '';
+      const match = producers.find(p => {
+        if (rutNorm && p.rut) {
+          return p.rut.replace(/[.\s]/g, '').toLowerCase() === rutNorm;
+        }
+        return parsed.producer_name && (
+          p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
+          parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
+        );
+      });
       if (match) {
         producerId = match.id;
-      } else if (user) {
+      } else if (user && parsed.producer_name) {
         const { data: newProducer, error: createErr } = await supabase
           .from('producers')
-          .insert({ name: parsed.producer_name, user_id: user.id })
-          .select('id, name')
+          .insert({ name: parsed.producer_name, rut: parsed.producer_rut || null, user_id: user.id })
+          .select('id, name, rut')
           .single();
         if (!createErr && newProducer) {
           producerId = newProducer.id;
-          setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name }].sort((a, b) => a.name.localeCompare(b.name)));
+          setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name, rut: newProducer.rut }].sort((a, b) => a.name.localeCompare(b.name)));
           toast.info(`Productor "${newProducer.name}" creado automáticamente`);
         }
       }
