@@ -100,11 +100,11 @@ export async function generateProducerPdf(data: PdfData) {
 
   if (logoBase64) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(m, 3, 34, 24, 2, 2, 'F');
-    doc.addImage(logoBase64, 'PNG', m + 1, 4, 32, 22);
+    doc.roundedRect(m, 2, 40, 26, 2, 2, 'F');
+    doc.addImage(logoBase64, 'PNG', m + 1, 3, 38, 24);
   }
 
-  const tx = logoBase64 ? 52 : pw / 2;
+  const tx = logoBase64 ? 58 : pw / 2;
   const ta: any = logoBase64 ? 'left' : 'center';
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
@@ -153,7 +153,7 @@ export async function generateProducerPdf(data: PdfData) {
     theme: 'plain',
     styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
     body: [
-      ['Kg Secos Totales', `${Number(data.dryKg).toLocaleString('es-CL')} kg`],
+      ['Kg Secos Totales', 'En proceso'],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
