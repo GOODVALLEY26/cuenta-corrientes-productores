@@ -9,9 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Upload, FileText, Eye, Loader2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import DriveFileBrowser from '@/components/DriveFileBrowser';
 
 type Producer = { id: string; name: string };
 
@@ -20,13 +19,10 @@ const ProducerInvoices = () => {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [driveOpen, setDriveOpen] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [needsTc, setNeedsTc] = useState(false);
-  const [driveBase64, setDriveBase64] = useState<string | null>(null);
-  const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' });
 
@@ -135,63 +131,19 @@ const ProducerInvoices = () => {
 
     if (error) { toast.error(error.message); setUploading(false); return; }
 
-    if (data) {
-      if (pdfFile) {
-        const filePath = await uploadPdf(data.id);
-        if (filePath) {
-          await supabase.from('producer_invoices').update({ file_path: filePath } as any).eq('id', data.id);
-        }
-      } else if (driveBase64 && driveFileName) {
-        // Upload Drive PDF from base64
-        const bytes = Uint8Array.from(atob(driveBase64), c => c.charCodeAt(0));
-        const filePath = `${user!.id}/${data.id}_${driveFileName}`;
-        const { error: upErr } = await supabase.storage.from('producer-invoices-files').upload(filePath, bytes, { contentType: 'application/pdf', cacheControl: '3600', upsert: true });
-        if (!upErr) {
-          await supabase.from('producer_invoices').update({ file_path: filePath } as any).eq('id', data.id);
-        }
+    if (pdfFile && data) {
+      const filePath = await uploadPdf(data.id);
+      if (filePath) {
+        await supabase.from('producer_invoices').update({ file_path: filePath } as any).eq('id', data.id);
       }
     }
 
     toast.success('Documento registrado');
     setPdfFile(null);
-    setDriveBase64(null);
-    setDriveFileName(null);
     setNeedsTc(false);
     setOpen(false);
     setUploading(false);
     load();
-  };
-
-  const handleDriveImport = (parsed: any) => {
-    let producerId = '';
-    if (parsed.producer_name) {
-      const match = producers.find(p =>
-        p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
-        parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
-      );
-      if (match) producerId = match.id;
-    }
-
-    const hasExchangeRate = parsed.exchange_rate != null;
-    setNeedsTc(!hasExchangeRate);
-    setDriveBase64(parsed.pdf_base64 || null);
-    setDriveFileName(parsed.file_name || null);
-
-    setForm({
-      producer_id: producerId,
-      document_type: parsed.document_type || 'factura',
-      invoice_number: parsed.invoice_number || '',
-      amount_clp: parsed.amount_net_clp ? String(parsed.amount_net_clp) : '',
-      iva_clp: parsed.iva_clp ? String(parsed.iva_clp) : '',
-      exchange_rate: parsed.exchange_rate ? String(parsed.exchange_rate) : '',
-      date: parsed.date || new Date().toISOString().split('T')[0],
-      notes: parsed.notes || '',
-    });
-
-    if (!hasExchangeRate) {
-      toast.info('No se encontró tipo de cambio en la factura. Por favor ingrésalo manualmente.');
-    }
-    setOpen(true);
   };
 
   const remove = async (id: string, filePath?: string) => {
@@ -231,14 +183,9 @@ const ProducerInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Productores</h1>
           <p className="text-muted-foreground">Sube el PDF — se extraen Neto + IVA. Si no encuentra el TC, te lo pedirá.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setDriveOpen(true)}>
-            <FolderOpen className="h-4 w-4 mr-2" />Importar de Drive
-          </Button>
-          <Button onClick={() => { setForm({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setDriveBase64(null); setDriveFileName(null); setNeedsTc(false); setOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />Agregar
-          </Button>
-        </div>
+        <Button onClick={() => { setForm({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setNeedsTc(false); setOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />Agregar
+        </Button>
       </div>
 
       <Card>
@@ -384,11 +331,6 @@ const ProducerInvoices = () => {
         </DialogContent>
       </Dialog>
 
-      <DriveFileBrowser
-        open={driveOpen}
-        onOpenChange={setDriveOpen}
-        onInvoiceImported={handleDriveImport}
-      />
     </div>
   );
 };
