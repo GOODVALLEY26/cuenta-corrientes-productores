@@ -96,45 +96,45 @@ export async function generateProducerPdf(data: PdfData) {
   // ── HEADER ──
   const logoBase64 = await loadLogoAsBase64();
   doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pw, 34, 'F');
+  doc.rect(0, 0, pw, 30, 'F');
 
   if (logoBase64) {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(m, 3, 38, 28, 2, 2, 'F');
-    doc.addImage(logoBase64, 'PNG', m + 2, 5, 34, 24);
+    doc.roundedRect(m, 3, 34, 24, 2, 2, 'F');
+    doc.addImage(logoBase64, 'PNG', m + 1, 4, 32, 22);
   }
 
-  const tx = logoBase64 ? 56 : pw / 2;
+  const tx = logoBase64 ? 52 : pw / 2;
   const ta: any = logoBase64 ? 'left' : 'center';
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Cuenta Corriente Productor', tx, 15, { align: ta });
-  doc.setFontSize(11);
+  doc.text('Cuenta Corriente Productor', tx, 13, { align: ta });
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Temporada ${data.year}`, tx, 22, { align: ta });
-  doc.setFontSize(8);
+  doc.text(`Temporada ${data.year}`, tx, 19, { align: ta });
+  doc.setFontSize(7.5);
   doc.setTextColor(210, 190, 230);
   const today = new Date();
-  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, tx, 28, { align: ta });
+  doc.text(`Emitido: ${today.getDate()} de ${MONTHS_FULL[today.getMonth()]} ${today.getFullYear()}`, tx, 25, { align: ta });
   doc.setTextColor(0, 0, 0);
 
   // Producer bar
-  y = 37;
+  y = 33;
   doc.setFillColor(...MUTED_BG);
-  doc.roundedRect(m, y, cw, 10, 2, 2, 'F');
-  doc.setFontSize(11);
+  doc.roundedRect(m, y, cw, 9, 2, 2, 'F');
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...PRIMARY);
-  doc.text(data.producer.name, m + 4, y + 6.8);
+  doc.text(data.producer.name, m + 4, y + 6);
   if (data.producer.rut) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(100, 100, 100);
-    doc.text(`RUT: ${data.producer.rut}`, pw - m - 4, y + 6.8, { align: 'right' });
+    doc.text(`RUT: ${data.producer.rut}`, pw - m - 4, y + 6, { align: 'right' });
   }
   doc.setTextColor(0, 0, 0);
-  y = 50;
+  y = 45;
 
   const sp = 5; // spacing between sections
   const halfW = (cw - 6) / 2;
