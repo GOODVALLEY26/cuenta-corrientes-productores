@@ -99,12 +99,10 @@ export async function generateProducerPdf(data: PdfData) {
   doc.rect(0, 0, pw, 30, 'F');
 
   if (logoBase64) {
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(m, 2, 40, 26, 2, 2, 'F');
-    doc.addImage(logoBase64, 'PNG', m + 1, 3, 38, 24);
+    doc.addImage(logoBase64, 'PNG', m, 3, 50, 24);
   }
 
-  const tx = logoBase64 ? 58 : pw / 2;
+  const tx = logoBase64 ? 66 : pw / 2;
   const ta: any = logoBase64 ? 'left' : 'center';
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
@@ -149,9 +147,10 @@ export async function generateProducerPdf(data: PdfData) {
   let ly = sectionTitle(doc, lx, y, halfW, 'Facturación Total');
   autoTable(doc, {
     startY: ly,
-    margin: { left: lx + 2, right: pw - lx - halfW + 2 },
+    margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
+    tableWidth: halfW - 4,
     theme: 'plain',
-    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
       ['Kg Secos Totales', 'En proceso'],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
@@ -170,9 +169,10 @@ export async function generateProducerPdf(data: PdfData) {
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
   autoTable(doc, {
     startY: ry,
-    margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+    margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+    tableWidth: halfW - 4,
     theme: 'plain',
-    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
       ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
       ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
@@ -232,9 +232,10 @@ export async function generateProducerPdf(data: PdfData) {
   autoTable(doc, {
     startY: aY + 10,
     margin: { left: m + 1, right: m + 1 },
+    tableWidth: cw - 2,
     theme: 'grid',
     headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
-    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2 },
+    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
     head: [advHeaders],
     body: advRows,
     columnStyles: {
@@ -286,9 +287,10 @@ export async function generateProducerPdf(data: PdfData) {
 
     autoTable(doc, {
       startY: lpY,
-      margin: { left: lx + 2, right: pw - lx - halfW + 2 },
+      margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
+      tableWidth: halfW - 4,
       theme: 'plain',
-      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
       body: payRows,
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
       didParseCell: (h) => {
@@ -321,9 +323,10 @@ export async function generateProducerPdf(data: PdfData) {
       }
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
         theme: 'plain',
-        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
         body: docRows,
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
         didParseCell: (h) => {
@@ -341,9 +344,10 @@ export async function generateProducerPdf(data: PdfData) {
     } else {
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
         theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
         body: [['Facturación al día ✓']],
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
