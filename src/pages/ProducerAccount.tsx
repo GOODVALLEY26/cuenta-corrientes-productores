@@ -160,6 +160,7 @@ const ProducerAccount = () => {
   };
 
   const fmt = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('en-US');
+  const fmtDec = (n: number | undefined | null, decimals = 2) => (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   const fmtClp = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('es-CL');
 
   const methodLabel: Record<string, string> = {
