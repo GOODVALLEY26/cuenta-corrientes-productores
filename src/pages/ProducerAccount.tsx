@@ -195,7 +195,7 @@ const ProducerAccount = () => {
         </div>
         <div className="flex gap-2">
           {data && (
-            <Button variant="outline" onClick={() => generateProducerPdf(data)}>
+            <Button variant="outline" onClick={async () => await generateProducerPdf(data)}>
               <Download className="h-4 w-4 mr-1" /> Descargar PDF
             </Button>
           )}
