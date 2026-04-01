@@ -183,14 +183,9 @@ const ProducerInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Productores</h1>
           <p className="text-muted-foreground">Sube el PDF — se extraen Neto + IVA. Si no encuentra el TC, te lo pedirá.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setDriveOpen(true)}>
-            <FolderOpen className="h-4 w-4 mr-2" />Importar de Drive
-          </Button>
-          <Button onClick={() => { setForm({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setDriveBase64(null); setDriveFileName(null); setNeedsTc(false); setOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />Agregar
-          </Button>
-        </div>
+        <Button onClick={() => { setForm({ producer_id: '', document_type: 'factura', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', date: new Date().toISOString().split('T')[0], notes: '' }); setPdfFile(null); setNeedsTc(false); setOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />Agregar
+        </Button>
       </div>
 
       <Card>
