@@ -250,6 +250,12 @@ const ProducerAccount = () => {
                       <Badge variant="outline">{methodLabel[data.method] ?? data.method}</Badge>
                     </TableCell>
                   </TableRow>
+                  {data.method === 'pago_clp' && data.cuotaClp > 0 && (
+                    <TableRow className="bg-primary/5">
+                      <TableCell className="font-medium">Cuota a depositar</TableCell>
+                      <TableCell className="text-right font-bold">CLP {fmtClp(data.cuotaClp)}</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
