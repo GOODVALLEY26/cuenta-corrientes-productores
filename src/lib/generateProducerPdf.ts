@@ -232,9 +232,10 @@ export async function generateProducerPdf(data: PdfData) {
   autoTable(doc, {
     startY: aY + 10,
     margin: { left: m + 1, right: m + 1 },
+    tableWidth: cw - 2,
     theme: 'grid',
     headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
-    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2 },
+    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
     head: [advHeaders],
     body: advRows,
     columnStyles: {
