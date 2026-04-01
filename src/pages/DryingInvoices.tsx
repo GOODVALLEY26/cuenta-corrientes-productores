@@ -375,6 +375,12 @@ const DryingInvoices = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DriveFileBrowser
+        open={driveOpen}
+        onOpenChange={setDriveOpen}
+        onInvoiceImported={handleDriveImport}
+      />
     </div>
   );
 };
