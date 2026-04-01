@@ -216,7 +216,11 @@ const DryingInvoices = () => {
                   <TableCell className="text-right">${Number(inv.iva_clp || 0).toLocaleString('es-CL')}</TableCell>
                   <TableCell className="text-right">{inv.exchange_rate ?? '-'}</TableCell>
                   <TableCell className="text-right">{inv.amount_usd ? `USD ${Number(inv.amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</TableCell>
-                  <TableCell>{inv.paid_installments}/{inv.total_installments}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {inv.installment_currency === 'usd' ? 'Cuotas USD' : inv.installment_currency === 'liquidacion' ? 'Liquidación' : 'Cuotas CLP'}
+                    </Badge>
+                  </TableCell>
                   <TableCell><Badge variant={STATUS_COLORS[inv.status] as any}>{STATUS_LABELS[inv.status]}</Badge></TableCell>
                   <TableCell>
                     {inv.file_path ? (
