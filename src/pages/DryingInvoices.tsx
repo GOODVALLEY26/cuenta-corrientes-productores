@@ -171,14 +171,27 @@ const DryingInvoices = () => {
     load();
   };
 
-  const handleDriveImport = (parsed: any) => {
+  const handleDriveImport = async (parsed: any) => {
     let producerId = '';
     if (parsed.producer_name) {
       const match = producers.find(p =>
         p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
         parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
       );
-      if (match) producerId = match.id;
+      if (match) {
+        producerId = match.id;
+      } else if (user) {
+        const { data: newProducer, error: createErr } = await supabase
+          .from('producers')
+          .insert({ name: parsed.producer_name, user_id: user.id })
+          .select('id, name')
+          .single();
+        if (!createErr && newProducer) {
+          producerId = newProducer.id;
+          setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name }].sort((a, b) => a.name.localeCompare(b.name)));
+          toast.info(`Productor "${newProducer.name}" creado automáticamente`);
+        }
+      }
     }
 
     setDriveBase64(parsed.pdf_base64 || null);
