@@ -299,16 +299,13 @@ const DryingInvoices = () => {
                 <Input type="number" step="0.01" value={form.exchange_rate} onChange={e => setForm({ ...form, exchange_rate: e.target.value })} placeholder="ej: 950" />
               </div>
               <div className="space-y-2">
-                <Label>Cuotas</Label>
-                <Input type="number" min="1" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Moneda Cuotas</Label>
-                <Select value={form.installment_currency} onValueChange={v => setForm({ ...form, installment_currency: v })}>
+                <Label>Método de Pago Secado</Label>
+                <Select value={form.payment_method} onValueChange={(v: any) => setForm({ ...form, payment_method: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="clp">CLP</SelectItem>
-                    <SelectItem value="usd">USD</SelectItem>
+                    <SelectItem value="cuotas_clp">Cuotas en CLP</SelectItem>
+                    <SelectItem value="cuotas_usd">Cuotas en USD</SelectItem>
+                    <SelectItem value="liquidacion_final">Liquidación Final</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
