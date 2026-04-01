@@ -136,9 +136,7 @@ const ProducerAccount = () => {
       .reduce((s, a) => s + a.advance, 0);
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
-    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
-    const nextMonthEx = exRates.find(e => e.month === (nextAdvance?.month ?? 0));
-    const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
+    // docExRate already computed above
 
     // IVA balance
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
