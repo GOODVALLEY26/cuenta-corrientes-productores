@@ -147,9 +147,10 @@ export async function generateProducerPdf(data: PdfData) {
   let ly = sectionTitle(doc, lx, y, halfW, 'Facturación Total');
   autoTable(doc, {
     startY: ly,
-    margin: { left: lx + 2, right: pw - lx - halfW + 2 },
+    margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
+    tableWidth: halfW - 4,
     theme: 'plain',
-    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+    styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
       ['Kg Secos Totales', 'En proceso'],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
