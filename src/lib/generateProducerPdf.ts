@@ -141,7 +141,7 @@ export async function generateProducerPdf(data: PdfData) {
   const lx = m;
   const rx = m + halfW + 5;
   const fs = 8;
-  const cp = 2.5;
+  const cp = 2;
 
   // ═══════════════════════════════════════════
   // 1. FACTURACIÓN & SECADO
