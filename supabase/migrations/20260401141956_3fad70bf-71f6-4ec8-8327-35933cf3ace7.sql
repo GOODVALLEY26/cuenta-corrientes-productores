@@ -1,0 +1,1 @@
+ALTER TABLE public.advance_rates ADD COLUMN paid_date date DEFAULT NULL;

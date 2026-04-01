@@ -21,6 +21,7 @@ export type Database = {
           id: string
           month: number
           paid: boolean
+          paid_date: string | null
           producer_id: string
           user_id: string
           year: number
@@ -31,6 +32,7 @@ export type Database = {
           id?: string
           month: number
           paid?: boolean
+          paid_date?: string | null
           producer_id: string
           user_id: string
           year: number
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           month?: number
           paid?: boolean
+          paid_date?: string | null
           producer_id?: string
           user_id?: string
           year?: number
