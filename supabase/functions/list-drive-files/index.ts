@@ -1,0 +1,103 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+async function getAccessToken(serviceAccount: any): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+  const payload = btoa(JSON.stringify({
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/drive.readonly',
+    aud: serviceAccount.token_uri,
+    exp: now + 3600,
+    iat: now,
+  }))
+
+  const encoder = new TextEncoder()
+  const signingInput = `${header}.${payload}`
+
+  // Import the private key
+  const pemContent = serviceAccount.private_key
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\n/g, '')
+  
+  const binaryKey = Uint8Array.from(atob(pemContent), c => c.charCodeAt(0))
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    encoder.encode(signingInput)
+  )
+
+  const sig = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  
+  const jwt = `${header}.${payload}.${sig}`
+
+  const tokenRes = await fetch(serviceAccount.token_uri, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  })
+
+  if (!tokenRes.ok) {
+    const err = await tokenRes.text()
+    throw new Error(`Token exchange failed: ${err}`)
+  }
+
+  const tokenData = await tokenRes.json()
+  return tokenData.access_token
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const { folderId } = await req.json()
+    if (!folderId) throw new Error('folderId is required')
+
+    const saJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+    if (!saJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not configured')
+
+    const serviceAccount = JSON.parse(saJson)
+    const accessToken = await getAccessToken(serviceAccount)
+
+    // List PDF files in the folder
+    const query = `'${folderId}' in parents and mimeType='application/pdf' and trashed=false`
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,createdTime,modifiedTime,size)&orderBy=modifiedTime desc&pageSize=100`
+
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Drive API error [${res.status}]: ${err}`)
+    }
+
+    const data = await res.json()
+
+    return new Response(JSON.stringify({ files: data.files || [] }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})
