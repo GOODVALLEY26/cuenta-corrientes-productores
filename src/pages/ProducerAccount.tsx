@@ -261,12 +261,6 @@ const ProducerAccount = () => {
                     <TableCell className="font-medium text-green-700">Total Pagado CLP</TableCell>
                     <TableCell className="text-right text-green-700 font-bold">CLP {fmtClp(data.cuotaTotalPaidClp)}</TableCell>
                   </TableRow>
-                  {data.cuotaTotalPaidUsd > 0 && (
-                    <TableRow>
-                      <TableCell className="font-medium text-green-700">Total Pagado USD</TableCell>
-                      <TableCell className="text-right text-green-700">USD {fmt(data.cuotaTotalPaidUsd)}</TableCell>
-                    </TableRow>
-                  )}
                   <TableRow className="bg-muted/50">
                     <TableCell className="font-bold">Saldo CLP</TableCell>
                     <TableCell className={`text-right font-bold ${data.cuotaSaldoClp > 0 ? 'text-destructive' : 'text-green-700'}`}>
