@@ -133,18 +133,57 @@ const DryingInvoices = () => {
 
     if (error) { toast.error(error.message); setUploading(false); return; }
 
-    if (pdfFile && data) {
-      const filePath = await uploadPdf(data.id);
-      if (filePath) {
-        await supabase.from('drying_invoices').update({ file_path: filePath } as any).eq('id', data.id);
+    if (data) {
+      if (pdfFile) {
+        const filePath = await uploadPdf(data.id);
+        if (filePath) {
+          await supabase.from('drying_invoices').update({ file_path: filePath } as any).eq('id', data.id);
+        }
+      } else if (driveBase64 && driveFileName) {
+        const bytes = Uint8Array.from(atob(driveBase64), c => c.charCodeAt(0));
+        const filePath = `${user!.id}/${data.id}_${driveFileName}`;
+        const { error: upErr } = await supabase.storage.from('drying-invoices-files').upload(filePath, bytes, { contentType: 'application/pdf', cacheControl: '3600', upsert: true });
+        if (!upErr) {
+          await supabase.from('drying_invoices').update({ file_path: filePath } as any).eq('id', data.id);
+        }
       }
     }
 
     toast.success('Factura creada');
     setPdfFile(null);
+    setDriveBase64(null);
+    setDriveFileName(null);
     setOpen(false);
     setUploading(false);
     load();
+  };
+
+  const handleDriveImport = (parsed: any) => {
+    let producerId = '';
+    if (parsed.producer_name) {
+      const match = producers.find(p =>
+        p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
+        parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
+      );
+      if (match) producerId = match.id;
+    }
+
+    setDriveBase64(parsed.pdf_base64 || null);
+    setDriveFileName(parsed.file_name || null);
+
+    setForm({
+      producer_id: producerId,
+      invoice_number: parsed.invoice_number || '',
+      amount_clp: parsed.amount_net_clp ? String(parsed.amount_net_clp) : '',
+      iva_clp: parsed.iva_clp ? String(parsed.iva_clp) : '',
+      exchange_rate: parsed.exchange_rate ? String(parsed.exchange_rate) : '',
+      payment_method: 'cuotas_clp',
+      date: parsed.date || new Date().toISOString().split('T')[0],
+      notes: parsed.notes || '',
+    });
+
+    toast.success('Datos extraídos — revisa y completa el formulario');
+    setOpen(true);
   };
 
   const remove = async (id: string, filePath?: string) => {
