@@ -120,7 +120,10 @@ const ProducerAccount = () => {
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
-    const ivaProductor = prodInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
+    const ivaFacturado = prodInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
+    const docMontoCLP = docExRate ? docNeededUsd * docExRate : 0;
+    const ivaDocRequerido = docNeededUsd > 0 ? docMontoCLP * 0.19 : 0;
+    const ivaProductor = ivaFacturado + ivaDocRequerido;
     const ivaSaldo = ivaSecado - ivaProductor;
 
     setData({
