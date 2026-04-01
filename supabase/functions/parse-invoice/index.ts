@@ -35,6 +35,7 @@ serve(async (req) => {
 Extrae la siguiente información y devuelve SOLO un JSON válido (sin markdown):
 {
   "producer_name": "nombre del emisor de la factura",
+  "producer_rut": "RUT del emisor (formato XX.XXX.XXX-X o sin puntos), o null si no aparece",
   "invoice_number": "número de folio",
   "amount_net_clp": número NETO en CLP (sin IVA, solo número, sin puntos ni comas),
   "iva_clp": número del IVA en CLP (solo número, sin puntos ni comas),
