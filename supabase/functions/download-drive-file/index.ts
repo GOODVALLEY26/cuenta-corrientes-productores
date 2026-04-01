@@ -83,9 +83,10 @@ serve(async (req) => {
     
     if (!fileId) throw new Error('fileId is required')
 
-    const saJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')
-    if (!saJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not configured')
+    const saB64 = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_B64')
+    if (!saB64) throw new Error('GOOGLE_SERVICE_ACCOUNT_B64 not configured')
 
+    const saJson = new TextDecoder().decode(Uint8Array.from(atob(saB64), c => c.charCodeAt(0)))
     const serviceAccount = JSON.parse(saJson)
     const accessToken = await getAccessToken(serviceAccount)
 
