@@ -231,10 +231,6 @@ const ProducerAccount = () => {
                     <TableCell className="font-medium">Total Facturado CLP</TableCell>
                     <TableCell className="text-right">CLP {fmtClp(data.totalInvoicedClp)}</TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Método pago secado</TableCell>
-                    <TableCell className="text-right"><Badge variant="outline">{methodLabel[data.method] ?? data.method}</Badge></TableCell>
-                  </TableRow>
                 </TableBody>
               </Table>
             </CardContent>
