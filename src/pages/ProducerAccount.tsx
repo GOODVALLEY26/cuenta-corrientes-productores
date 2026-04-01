@@ -85,6 +85,10 @@ const ProducerAccount = () => {
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
     const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
 
+    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
+    const nextMonthEx = exRates.find(e => e.month === (advances.find(a => !a.paid)?.month ?? 0));
+    const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
+
     // Build per-month discount map
     // Only USD cuotas discount from anticipos
     const discountByMonth: Record<number, number> = {};
@@ -93,11 +97,12 @@ const ProducerAccount = () => {
     if (hasCuotasUsd) {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
-        if (inst && inst.amount_usd) {
+        if (inst && inst.paid && inst.amount_usd) {
+          // Cuota pagada: usar el valor fijo registrado
           discountByMonth[adv.month] = Number(inst.amount_usd);
         } else {
-          const monthEx = exRates.find(e => e.month === adv.month);
-          const tc = monthEx ? Number(monthEx.rate) : fallbackExRate;
+          // Cuota pendiente: usar TC del documento requerido
+          const tc = docExRate;
           discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
         }
       }
@@ -131,9 +136,7 @@ const ProducerAccount = () => {
       .reduce((s, a) => s + a.advance, 0);
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
-    // Exchange rate for next month: from exchange_rates table, fallback to last producer invoice
-    const nextMonthEx = exRates.find(e => e.month === (nextAdvance?.month ?? 0));
-    const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
+    // docExRate already computed above
 
     // IVA balance
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
@@ -281,7 +284,51 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* Anticipos */}
+          {/* Pago Cuota de Secado */}
+          {data.cuotaDetails.length > 0 && (
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Pago Cuota de Secado</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cuota</TableHead>
+                      <TableHead>Mes</TableHead>
+                      <TableHead className="text-right">Monto CLP</TableHead>
+                      <TableHead className="text-right">TC</TableHead>
+                      <TableHead className="text-right">Monto USD</TableHead>
+                      <TableHead className="text-center">Estado</TableHead>
+                      <TableHead>Fecha Pago</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.cuotaDetails.map((inst: any, idx: number) => {
+                      const tc = inst.paid && inst.exchange_rate ? Number(inst.exchange_rate) : data.docExRate;
+                      const usd = tc ? Number(inst.amount_clp) / tc : null;
+                      return (
+                        <TableRow key={inst.id}>
+                          <TableCell className="font-medium">{inst.installment_number}/{data.cuotaDetails.length}</TableCell>
+                          <TableCell>{inst.month && inst.month <= 12 ? MONTHS_FULL[inst.month - 1] : `Mes ${inst.month}`}</TableCell>
+                          <TableCell className="text-right">CLP {fmtClp(Number(inst.amount_clp))}</TableCell>
+                          <TableCell className="text-right">{tc ? `$${Number(tc).toLocaleString('es-CL')}` : '-'}</TableCell>
+                          <TableCell className="text-right">{inst.paid && inst.amount_usd ? `USD ${fmt(Number(inst.amount_usd))}` : usd ? `USD ${fmt(usd)}` : '-'}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={inst.paid ? 'default' : 'outline'} className={inst.paid ? 'bg-green-600' : ''}>
+                              {inst.paid ? 'Pagado' : 'Pendiente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('es-CL') : '-'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="lg:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Anticipos {year}</CardTitle>
