@@ -322,9 +322,10 @@ export async function generateProducerPdf(data: PdfData) {
       }
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
         theme: 'plain',
-        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50] },
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
         body: docRows,
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
         didParseCell: (h) => {
@@ -342,9 +343,10 @@ export async function generateProducerPdf(data: PdfData) {
     } else {
       autoTable(doc, {
         startY: rpY,
-        margin: { left: rx + 2, right: pw - rx - halfW + 2 },
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
         theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
         body: [['Facturación al día ✓']],
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
