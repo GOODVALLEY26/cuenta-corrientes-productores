@@ -66,22 +66,28 @@ const DryingInvoices = () => {
       }
 
       let producerId = '';
-      if (parsed.producer_name) {
-        const match = producers.find(p =>
-          p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
-          parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
-        );
+      if (parsed.producer_name || parsed.producer_rut) {
+        const rutNorm = parsed.producer_rut?.replace(/[.\s]/g, '').toLowerCase() || '';
+        const match = producers.find(p => {
+          if (rutNorm && p.rut) {
+            return p.rut.replace(/[.\s]/g, '').toLowerCase() === rutNorm;
+          }
+          return parsed.producer_name && (
+            p.name.toLowerCase().includes(parsed.producer_name.toLowerCase()) ||
+            parsed.producer_name.toLowerCase().includes(p.name.toLowerCase())
+          );
+        });
         if (match) {
           producerId = match.id;
-        } else if (user) {
+        } else if (user && parsed.producer_name) {
           const { data: newProducer, error: createErr } = await supabase
             .from('producers')
-            .insert({ name: parsed.producer_name, user_id: user.id })
-            .select('id, name')
+            .insert({ name: parsed.producer_name, rut: parsed.producer_rut || null, user_id: user.id })
+            .select('id, name, rut')
             .single();
           if (!createErr && newProducer) {
             producerId = newProducer.id;
-            setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name }].sort((a, b) => a.name.localeCompare(b.name)));
+            setProducers(prev => [...prev, { id: newProducer.id, name: newProducer.name, rut: newProducer.rut }].sort((a, b) => a.name.localeCompare(b.name)));
             toast.info(`Productor "${newProducer.name}" creado automáticamente`);
           }
         }
