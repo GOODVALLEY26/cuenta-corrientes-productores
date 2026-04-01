@@ -5,10 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function toBase64Url(str: string): string {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
 async function getAccessToken(serviceAccount: any): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({
+  const header = toBase64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+  const payload = toBase64Url(JSON.stringify({
     iss: serviceAccount.client_email,
     scope: 'https://www.googleapis.com/auth/drive.readonly',
     aud: serviceAccount.token_uri,
@@ -51,7 +55,11 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
     body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   })
 
-  if (!tokenRes.ok) throw new Error('Token exchange failed')
+  if (!tokenRes.ok) {
+    const err = await tokenRes.text()
+    console.error('Token exchange failed:', err)
+    throw new Error(`Token exchange failed: ${err}`)
+  }
 
   const tokenData = await tokenRes.json()
   return tokenData.access_token
@@ -63,7 +71,16 @@ serve(async (req) => {
   }
 
   try {
-    const { fileId, fileName } = await req.json()
+    const body = await req.text()
+    let fileId: string, fileName: string
+    try {
+      const parsed = JSON.parse(body)
+      fileId = parsed.fileId
+      fileName = parsed.fileName
+    } catch (e) {
+      throw new Error(`Invalid JSON body: ${body.substring(0, 50)}`)
+    }
+    
     if (!fileId) throw new Error('fileId is required')
 
     const saJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON')
@@ -72,7 +89,6 @@ serve(async (req) => {
     const serviceAccount = JSON.parse(saJson)
     const accessToken = await getAccessToken(serviceAccount)
 
-    // Download the file
     const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
       headers: { 'Authorization': `Bearer ${accessToken}` },
     })
@@ -84,7 +100,6 @@ serve(async (req) => {
 
     const fileBytes = new Uint8Array(await res.arrayBuffer())
 
-    // Now parse with AI (same logic as parse-invoice)
     let binary = ''
     const chunkSize = 8192
     for (let i = 0; i < fileBytes.length; i += chunkSize) {
@@ -100,7 +115,7 @@ serve(async (req) => {
 Analiza el PDF y determina si es una factura de productor o una factura de secado.
 Extrae la siguiente información y devuelve SOLO un JSON válido (sin markdown):
 {
-  "invoice_type": "producer" o "drying" (productor = factura emitida por un productor agrícola; secado = factura de servicio de secado),
+  "invoice_type": "producer" o "drying",
   "producer_name": "nombre del emisor o destinatario según el tipo",
   "invoice_number": "número de folio",
   "amount_net_clp": número NETO en CLP (sin IVA, solo número),
@@ -155,7 +170,6 @@ Si un campo no se encuentra, usa null.`
       }
     }
 
-    // Include the base64 PDF so frontend can upload it to storage
     parsed.pdf_base64 = base64
     parsed.file_name = fileName || `${fileId}.pdf`
 
@@ -163,6 +177,7 @@ Si un campo no se encuentra, usa null.`
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
+    console.error('Error:', error.message)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
