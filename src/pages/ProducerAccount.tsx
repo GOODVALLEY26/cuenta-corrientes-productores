@@ -289,7 +289,7 @@ const ProducerAccount = () => {
                      return (
                        <TableRow key={a.month}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                         <TableCell className="text-right">{fmt(a.centsPerKg / 100)}</TableCell>
+                         <TableCell className="text-right">{fmtDec(a.centsPerKg / 100)}</TableCell>
                          <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
                          <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
