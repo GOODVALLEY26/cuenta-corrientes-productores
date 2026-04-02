@@ -36,6 +36,11 @@ interface PdfData {
   cuotaTotalPaidUsd?: number;
   cuotaSaldoClp?: number;
   cuotaDetails?: any[];
+  hasCuotasUsd?: boolean;
+  cuotaTcByMonth?: Record<number, number | null>;
+  cuotaClpByMonth?: Record<number, number>;
+  cuotaUsdByMonth?: Record<number, number>;
+  prodInvoices?: any[];
 }
 
 const methodLabel: Record<string, string> = {
@@ -70,6 +75,15 @@ function cardBorder(doc: jsPDF, x: number, y: number, w: number, h: number) {
   doc.roundedRect(x, y, w, h, 2, 2, 'S');
 }
 
+function ensureSpace(doc: jsPDF, y: number, needed: number, m: number): number {
+  const ph = doc.internal.pageSize.getHeight();
+  if (y + needed > ph - 15) {
+    doc.addPage();
+    return m;
+  }
+  return y;
+}
+
 async function loadLogoAsBase64(): Promise<string | null> {
   try {
     const response = await fetch('/images/goodvalley-logo.png');
@@ -87,8 +101,8 @@ async function loadLogoAsBase64(): Promise<string | null> {
 
 export async function generateProducerPdf(data: PdfData) {
   const doc = new jsPDF('p', 'mm', 'letter');
-  const pw = doc.internal.pageSize.getWidth();  // 216
-  const ph = doc.internal.pageSize.getHeight(); // 279
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
   const m = 12;
   const cw = pw - m * 2;
   let y = 0;
@@ -166,6 +180,26 @@ export async function generateProducerPdf(data: PdfData) {
   });
   const lEnd1 = (doc as any).lastAutoTable.finalY;
 
+  // Secado section - now with cuota details for cuotas USD
+  const secadoBody: string[][] = [
+    ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
+    ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
+    ['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`],
+    ['Método pago', methodLabel[data.method] ?? data.method],
+  ];
+
+  if (data.hasCuotasUsd && data.nextAdvance) {
+    const nm = data.nextAdvance.month;
+    const tc = data.cuotaTcByMonth?.[nm];
+    const clpVal = data.cuotaClpByMonth?.[nm] ?? data.cuotaClp ?? 0;
+    const usdVal = data.cuotaUsdByMonth?.[nm] ?? 0;
+    secadoBody.push(['Cuota mensual CLP', `CLP ${fmtClp(clpVal)}`]);
+    secadoBody.push(['TC utilizado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
+    secadoBody.push(['Cuota en USD', tc ? `USD ${fmt(usdVal)}` : 'Pendiente TC']);
+  } else if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
+    secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
+  }
+
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
   autoTable(doc, {
     startY: ry,
@@ -173,12 +207,7 @@ export async function generateProducerPdf(data: PdfData) {
     tableWidth: halfW - 4,
     theme: 'plain',
     styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
-    body: [
-      ['Total Secado CLP', `CLP ${fmtClp(data.totalDryingClp)}`],
-      ['Total Pagado CLP', `CLP ${fmtClp(data.cuotaTotalPaidClp ?? 0)}`],
-      ['Saldo CLP', `CLP ${fmtClp(data.cuotaSaldoClp ?? 0)}`],
-      ['Método pago', methodLabel[data.method] ?? data.method],
-    ],
+    body: secadoBody,
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
       if (h.section === 'body') {
@@ -189,6 +218,8 @@ export async function generateProducerPdf(data: PdfData) {
           h.cell.styles.textColor = (data.cuotaSaldoClp ?? 0) > 0 ? [...ACCENT_RED] : [...ACCENT_GREEN];
         }
         if (label === 'Total Secado CLP' && h.column.index === 1) h.cell.styles.fontStyle = 'bold';
+        if (label === 'Cuota mensual CLP' && h.column.index === 1) h.cell.styles.fontStyle = 'bold';
+        if (label === 'Cuota en USD' && h.column.index === 1) h.cell.styles.fontStyle = 'bold';
       }
     },
   });
@@ -202,18 +233,20 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   // 2. ANTICIPOS
   // ═══════════════════════════════════════════
-  const showDiscount = Object.values(data.discountByMonth).some(v => v > 0);
+  const showDiscount = Object.values(data.discountByMonth).some(v => v > 0) || data.hasCuotasUsd;
   const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
   if (showDiscount) advHeaders.push('Desc. Secado', 'Neto USD');
   advHeaders.push('Estado', 'Fecha Pago');
 
   const advRows = data.advances.map(a => {
     const discount = data.discountByMonth[a.month] ?? 0;
-    const net = a.advance - discount;
+    const hasTc = !data.hasCuotasUsd || data.cuotaTcByMonth?.[a.month] != null;
+    const net = hasTc ? a.advance - discount : 0;
+    const showDiscountVal = hasTc && discount > 0;
     const row: string[] = [MONTHS_FULL[a.month - 1], fmt(a.centsPerKg / 100), `USD ${fmt(a.advance)}`];
     if (showDiscount) {
-      row.push(discount > 0 ? `-USD ${fmt(discount)}` : '-');
-      row.push(`USD ${fmt(net)}`);
+      row.push(showDiscountVal ? `-USD ${fmt(discount)}` : (!hasTc ? 'Sin TC' : '-'));
+      row.push(hasTc ? `USD ${fmt(net)}` : 'Sin TC');
     }
     row.push(a.paid ? '✓ Pagado' : 'Pendiente');
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
@@ -225,6 +258,7 @@ export async function generateProducerPdf(data: PdfData) {
   totalRow.push('');
   advRows.push(totalRow);
 
+  y = ensureSpace(doc, y, 40, m);
   const aY = y;
   sectionTitle(doc, m, aY, cw, `Anticipos ${data.year}`);
   const statusCol = showDiscount ? 5 : 3;
@@ -262,6 +296,14 @@ export async function generateProducerPdf(data: PdfData) {
           const val = String(h.cell.raw);
           if (val.includes('Pagado')) h.cell.styles.textColor = [...ACCENT_GREEN];
         }
+        // "Sin TC" cells in muted style
+        if (showDiscount && (h.column.index === 3 || h.column.index === 4)) {
+          const val = String(h.cell.raw);
+          if (val === 'Sin TC') {
+            h.cell.styles.textColor = [150, 150, 150];
+            h.cell.styles.fontStyle = 'italic';
+          }
+        }
       }
     },
   });
@@ -274,6 +316,7 @@ export async function generateProducerPdf(data: PdfData) {
   // 3. PRÓXIMO PAGO & DOCUMENTO REQUERIDO
   // ═══════════════════════════════════════════
   if (data.nextAdvance) {
+    y = ensureSpace(doc, y, 50, m);
     const pY = y;
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
 
@@ -361,12 +404,9 @@ export async function generateProducerPdf(data: PdfData) {
   }
 
   // ═══════════════════════════════════════════
-  // 4. BALANCE IVA — stretch to fill remaining space
+  // 4. BALANCE IVA
   // ═══════════════════════════════════════════
-  const footerSpace = 12;
-  const ivaAvailable = ph - y - footerSpace;
-  const ivaH = Math.max(35, ivaAvailable);
-
+  y = ensureSpace(doc, y, 40, m);
   const iY = y;
   sectionTitle(doc, m, iY, cw, 'Balance IVA (perspectiva del productor)');
 
@@ -376,7 +416,7 @@ export async function generateProducerPdf(data: PdfData) {
 
   const colW = (cw - 12) / 3;
   const bY = iY + 12;
-  const bH = Math.min(ivaH - 16, 22);
+  const bH = 22;
 
   const boxes = [
     { label: 'IVA Facturado (a su favor)', value: `CLP ${fmtClp(ivaAFavor)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
@@ -400,8 +440,72 @@ export async function generateProducerPdf(data: PdfData) {
 
   doc.setTextColor(0, 0, 0);
   cardBorder(doc, m, iY, cw, bY + bH - iY + 3);
+  y = bY + bH + 3 + sp;
 
-  // ── Footer ──
+  // ═══════════════════════════════════════════
+  // 5. HISTORIAL DE FACTURAS DEL PRODUCTOR
+  // ═══════════════════════════════════════════
+  const invoices = data.prodInvoices ?? [];
+  if (invoices.length > 0) {
+    y = ensureSpace(doc, y, 40, m);
+    const invY = y;
+    sectionTitle(doc, m, invY, cw, 'Historial de Facturas del Productor');
+
+    const docTypeLabels: Record<string, string> = {
+      factura: 'Factura',
+      nota_debito: 'Nota de Débito',
+      nota_credito: 'Nota de Crédito',
+    };
+
+    const sorted = [...invoices].sort((a, b) => a.date.localeCompare(b.date));
+    const invRows = sorted.map(inv => [
+      inv.invoice_number || '-',
+      docTypeLabels[inv.document_type] ?? inv.document_type,
+      new Date(inv.date + 'T12:00:00').toLocaleDateString('es-CL'),
+      `CLP ${fmtClp(inv.amount_clp)}`,
+      `$${Number(inv.exchange_rate).toLocaleString('es-CL')}`,
+      `USD ${fmt(Number(inv.amount_usd))}`,
+    ]);
+
+    // Total row
+    invRows.push([
+      'TOTAL', '', '',
+      `CLP ${fmtClp(data.totalInvoicedClp)}`,
+      '',
+      `USD ${fmt(data.totalInvoicedUsd)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: invY + 10,
+      margin: { left: m + 1, right: m + 1 },
+      tableWidth: cw - 2,
+      theme: 'grid',
+      headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
+      styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
+      head: [['N° Doc', 'Tipo', 'Fecha', 'Monto CLP', 'TC', 'Monto USD']],
+      body: invRows,
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center' },
+        2: { halign: 'center' },
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (h) => {
+        if (h.section === 'body' && h.row.index === invRows.length - 1) {
+          h.cell.styles.fontStyle = 'bold';
+          h.cell.styles.fillColor = [...MUTED_BG];
+        }
+      },
+    });
+
+    const invEnd = (doc as any).lastAutoTable.finalY;
+    cardBorder(doc, m, invY, cw, invEnd - invY + 1);
+    y = invEnd + sp;
+  }
+
+  // ── Footer on last page ──
   doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(150, 150, 150);
