@@ -82,14 +82,32 @@ const ProducerAccount = () => {
     const discountByMonth: Record<number, number> = {};
     const hasCuotasUsd = dryInvoices.some(inv => inv.installment_currency === 'usd');
 
+    const cuotaTcByMonth: Record<number, number | null> = {};
+    const cuotaClpByMonth: Record<number, number> = {};
+    const cuotaUsdByMonth: Record<number, number> = {};
+
     if (hasCuotasUsd) {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
+        const monthExRate = exRates.find(e => e.month === adv.month);
         if (inst && inst.paid && inst.amount_usd) {
           discountByMonth[adv.month] = Number(inst.amount_usd);
+          cuotaTcByMonth[adv.month] = inst.exchange_rate ? Number(inst.exchange_rate) : null;
+          cuotaClpByMonth[adv.month] = Number(inst.amount_clp);
+          cuotaUsdByMonth[adv.month] = Number(inst.amount_usd);
+        } else if (monthExRate) {
+          const tc = Number(monthExRate.rate);
+          const usdAmount = cuotaClp / tc;
+          discountByMonth[adv.month] = usdAmount;
+          cuotaTcByMonth[adv.month] = tc;
+          cuotaClpByMonth[adv.month] = cuotaClp;
+          cuotaUsdByMonth[adv.month] = usdAmount;
         } else {
-          const tc = docExRate;
-          discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
+          // No TC available - leave discount empty
+          discountByMonth[adv.month] = 0;
+          cuotaTcByMonth[adv.month] = null;
+          cuotaClpByMonth[adv.month] = cuotaClp;
+          cuotaUsdByMonth[adv.month] = 0;
         }
       }
     } else if (method === 'descuento_usd') {
