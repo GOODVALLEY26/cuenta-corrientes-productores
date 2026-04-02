@@ -430,7 +430,8 @@ export async function generateProducerPdf(data: PdfData) {
   const ivaEnContra = data.ivaSecado;
   const saldoP = ivaAFavor - ivaEnContra;
 
-  const colW = (cw - 12) / 3;
+  const colW = (cw - 18) / 3;
+  const colGap = 3;
   const bY = iY + 12;
   const bH = 22;
 
@@ -441,7 +442,7 @@ export async function generateProducerPdf(data: PdfData) {
   ];
 
   boxes.forEach((b, i) => {
-    const bx = m + 3 + i * (colW + 6);
+    const bx = m + 3 + i * (colW + colGap);
     doc.setFillColor(...b.bg);
     doc.roundedRect(bx, bY, colW, bH, 2, 2, 'F');
     doc.setFontSize(7);
