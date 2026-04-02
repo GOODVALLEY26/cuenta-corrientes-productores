@@ -328,6 +328,15 @@ export async function generateProducerPdf(data: PdfData) {
     if (data.nextDiscount > 0) payRows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
     payRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
 
+    // Add USD por facturar breakdown
+    if (data.needsDocument) {
+      const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
+      payRows.push(['', '']);
+      payRows.push(['Anticipos acum.', `USD ${fmt(cumulativeAdv)}`]);
+      payRows.push(['Ya facturado', `-USD ${fmt(data.totalInvoicedUsd)}`]);
+      payRows.push(['USD por Facturar', `USD ${fmt(data.docNeededUsd)}`]);
+    }
+
     autoTable(doc, {
       startY: lpY,
       margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
@@ -346,6 +355,16 @@ export async function generateProducerPdf(data: PdfData) {
             h.cell.styles.textColor = [...PRIMARY];
           }
           if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
+          if (label === 'Ya facturado') h.cell.styles.textColor = [...ACCENT_RED];
+          if (label === 'USD por Facturar') {
+            h.cell.styles.fontStyle = 'bold';
+            h.cell.styles.textColor = [...PRIMARY];
+            h.cell.styles.fillColor = [...MUTED_BG];
+          }
+          if (label === 'Anticipos acum.' || label === 'Ya facturado') {
+            h.cell.styles.fontSize = 7;
+            h.cell.styles.textColor = [100, 100, 100];
+          }
         }
       },
     });
@@ -397,26 +416,10 @@ export async function generateProducerPdf(data: PdfData) {
     }
     const rpEnd = (doc as any).lastAutoTable.finalY;
 
-    // Add footnote about document calculation
-    let noteY = Math.max(lpEnd, rpEnd);
-    if (data.needsDocument) {
-      noteY += 2;
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(130, 130, 130);
-      const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
-      const noteText = `* Monto neto = Anticipos acum. (USD ${fmt(cumulativeAdv)}) - Facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`;
-      const maxW = halfW - 6;
-      const lines = doc.splitTextToSize(noteText, maxW);
-      doc.text(lines, rx + 2, noteY + 4);
-      doc.setTextColor(0, 0, 0);
-      noteY += 3 + lines.length * 3;
-    }
-
-    const pH = Math.max(lpEnd, noteY) - pY + 1;
+    const pH = Math.max(lpEnd, rpEnd) - pY + 1;
     cardBorder(doc, lx, pY, halfW, pH);
     cardBorder(doc, rx, pY, halfW, pH);
-    y = Math.max(lpEnd, noteY) + sp;
+    y = Math.max(lpEnd, rpEnd) + sp;
   }
 
   // ═══════════════════════════════════════════
