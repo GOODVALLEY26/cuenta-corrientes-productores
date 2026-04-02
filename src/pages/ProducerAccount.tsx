@@ -369,144 +369,141 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* Próximo pago */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Próximo Pago</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.nextAdvance ? (
-                 <Table>
-                   <TableBody>
-                     <TableRow>
-                       <TableCell className="font-medium">Mes</TableCell>
-                       <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
-                     </TableRow>
-                     <TableRow>
-                       <TableCell className="font-medium">Anticipo Bruto</TableCell>
-                       <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
-                     </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Descuento Secado</TableCell>
-                        <TableCell className="text-right text-destructive">
-                          {data.nextDiscount > 0
-                            ? `-USD ${fmt(data.nextDiscount)}`
-                            : '-'}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow className="bg-muted/50">
-                        <TableCell className="font-bold">Neto a Pagar</TableCell>
-                        <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
-                      </TableRow>
-                   </TableBody>
-                 </Table>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* USD por Facturar */}
-          {data.needsDocument && data.nextAdvance && (
+          {/* Documento requerido (left) + Próximo pago & USD por Facturar (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:col-span-2">
+            {/* LEFT: Documento requerido */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">USD por Facturar</CardTitle>
+                <CardTitle className="text-base">Documento Requerido</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
-                      <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
-                      <TableCell className="text-right text-destructive">-USD {fmt(data.totalInvoicedUsd)}</TableCell>
-                    </TableRow>
-                    <TableRow className="bg-muted/50">
-                      <TableCell className="font-bold">USD por Facturar</TableCell>
-                      <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                {data.needsDocument ? (() => {
+                   const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '';
+                   const glosa = data.docType === 'Nota de Débito'
+                     ? `Ajuste de precio de anticipo ${nextMonth}`
+                     : `Anticipo compra fruta temporada ${data.year}`;
+                   const tc = data.docExRate;
+                   const montoCLP = tc ? data.docNeededUsd * tc : 0;
+                   const iva = montoCLP * 0.19;
+                   return (
+                   <Table>
+                     <TableBody>
+                       <TableRow>
+                         <TableCell className="font-medium">Tipo</TableCell>
+                         <TableCell className="text-right">
+                           <Badge variant="destructive">{data.docType}</Badge>
+                         </TableCell>
+                       </TableRow>
+                       <TableRow>
+                         <TableCell className="font-medium">Glosa</TableCell>
+                         <TableCell className="text-right font-medium">{glosa}</TableCell>
+                       </TableRow>
+                       <TableRow>
+                         <TableCell className="font-medium">Fecha Documento</TableCell>
+                         <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
+                       </TableRow>
+                       <TableRow>
+                         <TableCell className="font-medium">Monto Neto USD</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
+                       </TableRow>
+                       {tc ? (
+                         <>
+                           <TableRow>
+                             <TableCell className="font-medium">Tipo de Cambio</TableCell>
+                             <TableCell className="text-right">${Number(tc).toLocaleString('es-CL')}</TableCell>
+                           </TableRow>
+                           <TableRow>
+                             <TableCell className="font-medium">Monto Neto CLP</TableCell>
+                             <TableCell className="text-right">CLP {fmtClp(Math.round(montoCLP))}</TableCell>
+                           </TableRow>
+                           <TableRow>
+                             <TableCell className="font-medium">IVA (19%)</TableCell>
+                             <TableCell className="text-right">CLP {fmtClp(Math.round(iva))}</TableCell>
+                           </TableRow>
+                           <TableRow className="bg-muted/50">
+                             <TableCell className="font-bold">Total Documento</TableCell>
+                             <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(montoCLP + iva))}</TableCell>
+                           </TableRow>
+                         </>
+                       ) : (
+                         <TableRow>
+                           <TableCell className="font-medium text-muted-foreground" colSpan={2}>
+                             Sin tipo de cambio disponible.
+                           </TableCell>
+                         </TableRow>
+                       )}
+                     </TableBody>
+                   </Table>
+                   );
+                 })() : (
+                   <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
+                 )}
               </CardContent>
             </Card>
-          )}
 
-          {/* Documento requerido */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Documento Requerido</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.needsDocument ? (() => {
-                 const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '';
-                 const glosa = data.docType === 'Nota de Débito'
-                   ? `Ajuste de precio de anticipo ${nextMonth}`
-                   : `Anticipo compra fruta temporada ${data.year}`;
-                 const tc = data.docExRate;
-                 const montoCLP = tc ? data.docNeededUsd * tc : 0;
-                 const iva = montoCLP * 0.19;
-                 return (
-                 <>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">Tipo</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="destructive">{data.docType}</Badge>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Glosa</TableCell>
-                        <TableCell className="text-right font-medium">{glosa}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Fecha Documento</TableCell>
-                        <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Monto Neto USD</TableCell>
-                        <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
-                      </TableRow>
-                      {tc ? (
-                        <>
-                          <TableRow>
-                            <TableCell className="font-medium">Tipo de Cambio</TableCell>
-                            <TableCell className="text-right">${Number(tc).toLocaleString('es-CL')}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="font-medium">Monto Neto CLP</TableCell>
-                            <TableCell className="text-right">CLP {fmtClp(Math.round(montoCLP))}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="font-medium">IVA (19%)</TableCell>
-                            <TableCell className="text-right">CLP {fmtClp(Math.round(iva))}</TableCell>
-                          </TableRow>
-                          <TableRow className="bg-muted/50">
-                            <TableCell className="font-bold">Total Documento</TableCell>
-                            <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(montoCLP + iva))}</TableCell>
-                          </TableRow>
-                        </>
-                      ) : (
+            {/* RIGHT: Próximo Pago + USD por Facturar */}
+            <div className="flex flex-col gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Próximo Pago</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.nextAdvance ? (
+                     <Table>
+                       <TableBody>
+                         <TableRow>
+                           <TableCell className="font-medium">Mes</TableCell>
+                           <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Anticipo Bruto</TableCell>
+                           <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Descuento Secado</TableCell>
+                           <TableCell className="text-right text-destructive">
+                             {data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-'}
+                           </TableCell>
+                         </TableRow>
+                         <TableRow className="bg-muted/50">
+                           <TableCell className="font-bold">Neto a Pagar</TableCell>
+                           <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                         </TableRow>
+                       </TableBody>
+                     </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {data.needsDocument && data.nextAdvance && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">USD por Facturar</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
                         <TableRow>
-                          <TableCell className="font-medium text-muted-foreground" colSpan={2}>
-                            Sin tipo de cambio disponible. Registre un TC en Tipo de Cambio o ingrese una factura del productor.
-                          </TableCell>
+                          <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
+                          <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                  <p className="text-xs text-muted-foreground mt-3 px-4 pb-2">
-                    * Monto neto = Total anticipos acumulados (USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}) − Ya facturado (USD {fmt(data.totalInvoicedUsd)}) = USD {fmt(data.docNeededUsd)}
-                  </p>
-                 </>
-                 );
-               })() : (
-                 <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
-               )}
-            </CardContent>
-          </Card>
+                        <TableRow>
+                          <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
+                          <TableCell className="text-right text-destructive">-USD {fmt(data.totalInvoicedUsd)}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-bold">USD por Facturar</TableCell>
+                          <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
 
           {/* IVA */}
            <Card className="lg:col-span-2">
