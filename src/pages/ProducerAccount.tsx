@@ -369,9 +369,72 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
-          {/* Documento requerido (left) + Próximo pago & USD por Facturar (right) */}
+          {/* Próximo pago & USD por Facturar (left) + Documento requerido (right) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:col-span-2">
-            {/* LEFT: Documento requerido */}
+            {/* LEFT: Próximo Pago + USD por Facturar */}
+            <div className="flex flex-col gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Próximo Pago</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.nextAdvance ? (
+                     <Table>
+                       <TableBody>
+                         <TableRow>
+                           <TableCell className="font-medium">Mes</TableCell>
+                           <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Anticipo Bruto</TableCell>
+                           <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
+                         </TableRow>
+                         <TableRow>
+                           <TableCell className="font-medium">Descuento Secado</TableCell>
+                           <TableCell className="text-right text-destructive">
+                             {data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-'}
+                           </TableCell>
+                         </TableRow>
+                         <TableRow className="bg-muted/50">
+                           <TableCell className="font-bold">Neto a Pagar</TableCell>
+                           <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                         </TableRow>
+                       </TableBody>
+                     </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {data.needsDocument && data.nextAdvance && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">USD por Facturar</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
+                          <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
+                          <TableCell className="text-right text-destructive">-USD {fmt(data.totalInvoicedUsd)}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-muted/50">
+                          <TableCell className="font-bold">USD por Facturar</TableCell>
+                          <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* RIGHT: Documento requerido */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Documento Requerido</CardTitle>
@@ -440,69 +503,6 @@ const ProducerAccount = () => {
                  )}
               </CardContent>
             </Card>
-
-            {/* RIGHT: Próximo Pago + USD por Facturar */}
-            <div className="flex flex-col gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Próximo Pago</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {data.nextAdvance ? (
-                     <Table>
-                       <TableBody>
-                         <TableRow>
-                           <TableCell className="font-medium">Mes</TableCell>
-                           <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
-                         </TableRow>
-                         <TableRow>
-                           <TableCell className="font-medium">Anticipo Bruto</TableCell>
-                           <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
-                         </TableRow>
-                         <TableRow>
-                           <TableCell className="font-medium">Descuento Secado</TableCell>
-                           <TableCell className="text-right text-destructive">
-                             {data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-'}
-                           </TableCell>
-                         </TableRow>
-                         <TableRow className="bg-muted/50">
-                           <TableCell className="font-bold">Neto a Pagar</TableCell>
-                           <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
-                         </TableRow>
-                       </TableBody>
-                     </Table>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {data.needsDocument && data.nextAdvance && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">USD por Facturar</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
-                          <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
-                          <TableCell className="text-right text-destructive">-USD {fmt(data.totalInvoicedUsd)}</TableCell>
-                        </TableRow>
-                        <TableRow className="bg-muted/50">
-                          <TableCell className="font-bold">USD por Facturar</TableCell>
-                          <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </div>
 
           {/* IVA */}
