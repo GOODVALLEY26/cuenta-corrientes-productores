@@ -174,6 +174,11 @@ const ProducerAccount = () => {
       cuotaTotalPaidUsd,
       cuotaSaldoClp,
       cuotaDetails,
+      hasCuotasUsd,
+      cuotaTcByMonth,
+      cuotaClpByMonth,
+      cuotaUsdByMonth,
+      prodInvoices,
     });
   };
 
