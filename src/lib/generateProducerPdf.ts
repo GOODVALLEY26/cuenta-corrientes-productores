@@ -113,7 +113,7 @@ export async function generateProducerPdf(data: PdfData) {
   doc.rect(0, 0, pw, 30, 'F');
 
   if (logoBase64) {
-    doc.addImage(logoBase64, 'PNG', m, 3, 50, 24);
+    doc.addImage(logoBase64, 'PNG', m, 5, 60, 20);
   }
 
   const tx = logoBase64 ? 66 : pw / 2;
