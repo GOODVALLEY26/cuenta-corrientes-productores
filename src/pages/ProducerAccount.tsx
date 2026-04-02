@@ -82,14 +82,32 @@ const ProducerAccount = () => {
     const discountByMonth: Record<number, number> = {};
     const hasCuotasUsd = dryInvoices.some(inv => inv.installment_currency === 'usd');
 
+    const cuotaTcByMonth: Record<number, number | null> = {};
+    const cuotaClpByMonth: Record<number, number> = {};
+    const cuotaUsdByMonth: Record<number, number> = {};
+
     if (hasCuotasUsd) {
       for (const adv of advances) {
         const inst = installmentPayments.find((p: any) => p.month === adv.month);
+        const monthExRate = exRates.find(e => e.month === adv.month);
         if (inst && inst.paid && inst.amount_usd) {
           discountByMonth[adv.month] = Number(inst.amount_usd);
+          cuotaTcByMonth[adv.month] = inst.exchange_rate ? Number(inst.exchange_rate) : null;
+          cuotaClpByMonth[adv.month] = Number(inst.amount_clp);
+          cuotaUsdByMonth[adv.month] = Number(inst.amount_usd);
+        } else if (monthExRate) {
+          const tc = Number(monthExRate.rate);
+          const usdAmount = cuotaClp / tc;
+          discountByMonth[adv.month] = usdAmount;
+          cuotaTcByMonth[adv.month] = tc;
+          cuotaClpByMonth[adv.month] = cuotaClp;
+          cuotaUsdByMonth[adv.month] = usdAmount;
         } else {
-          const tc = docExRate;
-          discountByMonth[adv.month] = tc ? cuotaClp / tc : 0;
+          // No TC available - leave discount empty
+          discountByMonth[adv.month] = 0;
+          cuotaTcByMonth[adv.month] = null;
+          cuotaClpByMonth[adv.month] = cuotaClp;
+          cuotaUsdByMonth[adv.month] = 0;
         }
       }
     } else if (method === 'descuento_usd') {
@@ -156,6 +174,11 @@ const ProducerAccount = () => {
       cuotaTotalPaidUsd,
       cuotaSaldoClp,
       cuotaDetails,
+      hasCuotasUsd,
+      cuotaTcByMonth,
+      cuotaClpByMonth,
+      cuotaUsdByMonth,
+      prodInvoices,
     });
   };
 
@@ -257,6 +280,28 @@ const ProducerAccount = () => {
                       <TableCell className="text-right font-bold">CLP {fmtClp(data.cuotaClp)}</TableCell>
                     </TableRow>
                   )}
+                  {data.hasCuotasUsd && data.nextAdvance && (() => {
+                    const m = data.nextAdvance.month;
+                    const tc = data.cuotaTcByMonth?.[m];
+                    const clp = data.cuotaClpByMonth?.[m] ?? data.cuotaClp;
+                    const usd = data.cuotaUsdByMonth?.[m] ?? 0;
+                    return (
+                      <>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Cuota mensual CLP</TableCell>
+                          <TableCell className="text-right font-bold">CLP {fmtClp(clp)}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">TC utilizado</TableCell>
+                          <TableCell className="text-right">{tc ? `$${Number(tc).toLocaleString('es-CL')}` : <span className="text-muted-foreground italic">Sin TC</span>}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Cuota en USD</TableCell>
+                          <TableCell className="text-right font-bold">{tc ? `USD ${fmt(usd)}` : <span className="text-muted-foreground italic">Pendiente TC</span>}</TableCell>
+                        </TableRow>
+                      </>
+                    );
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
@@ -285,14 +330,16 @@ const ProducerAccount = () => {
                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
-                     const net = a.advance - discount;
+                     const hasTc = !data.hasCuotasUsd || data.cuotaTcByMonth?.[a.month] != null;
+                     const net = hasTc ? a.advance - discount : 0;
+                     const showDiscount = hasTc && discount > 0;
                      return (
                        <TableRow key={a.month}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
                          <TableCell className="text-right">{fmtDec(a.centsPerKg / 100)}</TableCell>
                          <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
-                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
-                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         <TableCell className="text-right text-destructive">{showDiscount ? `-USD ${fmt(discount)}` : !hasTc ? <span className="text-muted-foreground italic text-xs">Sin TC</span> : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">{hasTc ? `USD ${fmt(net)}` : <span className="text-muted-foreground italic text-xs">Sin TC</span>}</TableCell>
                          <TableCell className="text-center">
                            <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
                              {a.paid ? 'Pagado' : 'Pendiente'}
@@ -467,6 +514,53 @@ const ProducerAccount = () => {
                })()}
              </CardContent>
            </Card>
+
+          {/* Historial Facturas Productor */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Historial de Facturas del Productor</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N° Documento</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Monto CLP</TableHead>
+                    <TableHead className="text-right">TC</TableHead>
+                    <TableHead className="text-right">Monto USD</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(!data.prodInvoices || data.prodInvoices.length === 0) ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin facturas registradas</TableCell></TableRow>
+                  ) : [...data.prodInvoices].sort((a: any, b: any) => a.date.localeCompare(b.date)).map((inv: any) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.invoice_number || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {inv.document_type === 'nota_debito' ? 'Nota de Débito' : inv.document_type === 'nota_credito' ? 'Nota de Crédito' : 'Factura'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(inv.date + 'T12:00:00').toLocaleDateString('es-CL')}</TableCell>
+                      <TableCell className="text-right">CLP {fmtClp(inv.amount_clp)}</TableCell>
+                      <TableCell className="text-right">${Number(inv.exchange_rate).toLocaleString('es-CL')}</TableCell>
+                      <TableCell className="text-right font-bold">USD {fmt(inv.amount_usd)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {data.prodInvoices && data.prodInvoices.length > 0 && (
+                    <TableRow className="font-bold bg-muted/50">
+                      <TableCell colSpan={3}>Total</TableCell>
+                      <TableCell className="text-right">CLP {fmtClp(data.totalInvoicedClp)}</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">USD {fmt(data.totalInvoicedUsd)}</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
