@@ -514,6 +514,53 @@ const ProducerAccount = () => {
                })()}
              </CardContent>
            </Card>
+
+          {/* Historial Facturas Productor */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Historial de Facturas del Productor</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N° Documento</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Monto CLP</TableHead>
+                    <TableHead className="text-right">TC</TableHead>
+                    <TableHead className="text-right">Monto USD</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(!data.prodInvoices || data.prodInvoices.length === 0) ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sin facturas registradas</TableCell></TableRow>
+                  ) : [...data.prodInvoices].sort((a: any, b: any) => a.date.localeCompare(b.date)).map((inv: any) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.invoice_number || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {inv.document_type === 'nota_debito' ? 'Nota de Débito' : inv.document_type === 'nota_credito' ? 'Nota de Crédito' : 'Factura'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(inv.date + 'T12:00:00').toLocaleDateString('es-CL')}</TableCell>
+                      <TableCell className="text-right">CLP {fmtClp(inv.amount_clp)}</TableCell>
+                      <TableCell className="text-right">${Number(inv.exchange_rate).toLocaleString('es-CL')}</TableCell>
+                      <TableCell className="text-right font-bold">USD {fmt(inv.amount_usd)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {data.prodInvoices && data.prodInvoices.length > 0 && (
+                    <TableRow className="font-bold bg-muted/50">
+                      <TableCell colSpan={3}>Total</TableCell>
+                      <TableCell className="text-right">CLP {fmtClp(data.totalInvoicedClp)}</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">USD {fmt(data.totalInvoicedUsd)}</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
