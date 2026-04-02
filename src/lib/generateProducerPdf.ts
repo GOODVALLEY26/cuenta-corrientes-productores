@@ -116,7 +116,7 @@ export async function generateProducerPdf(data: PdfData) {
     doc.addImage(logoBase64, 'PNG', m, 5, 60, 20);
   }
 
-  const tx = logoBase64 ? 66 : pw / 2;
+  const tx = logoBase64 ? 76 : pw / 2;
   const ta: any = logoBase64 ? 'left' : 'center';
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
