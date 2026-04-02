@@ -406,6 +406,33 @@ const ProducerAccount = () => {
             </CardContent>
           </Card>
 
+          {/* USD por Facturar */}
+          {data.needsDocument && data.nextAdvance && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">USD por Facturar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
+                      <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
+                      <TableCell className="text-right text-destructive">-USD {fmt(data.totalInvoicedUsd)}</TableCell>
+                    </TableRow>
+                    <TableRow className="bg-muted/50">
+                      <TableCell className="font-bold">USD por Facturar</TableCell>
+                      <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Documento requerido */}
           <Card>
             <CardHeader className="pb-3">
