@@ -280,6 +280,28 @@ const ProducerAccount = () => {
                       <TableCell className="text-right font-bold">CLP {fmtClp(data.cuotaClp)}</TableCell>
                     </TableRow>
                   )}
+                  {data.hasCuotasUsd && data.nextAdvance && (() => {
+                    const m = data.nextAdvance.month;
+                    const tc = data.cuotaTcByMonth?.[m];
+                    const clp = data.cuotaClpByMonth?.[m] ?? data.cuotaClp;
+                    const usd = data.cuotaUsdByMonth?.[m] ?? 0;
+                    return (
+                      <>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Cuota mensual CLP</TableCell>
+                          <TableCell className="text-right font-bold">CLP {fmtClp(clp)}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">TC utilizado</TableCell>
+                          <TableCell className="text-right">{tc ? `$${Number(tc).toLocaleString('es-CL')}` : <span className="text-muted-foreground italic">Sin TC</span>}</TableCell>
+                        </TableRow>
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Cuota en USD</TableCell>
+                          <TableCell className="text-right font-bold">{tc ? `USD ${fmt(usd)}` : <span className="text-muted-foreground italic">Pendiente TC</span>}</TableCell>
+                        </TableRow>
+                      </>
+                    );
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
