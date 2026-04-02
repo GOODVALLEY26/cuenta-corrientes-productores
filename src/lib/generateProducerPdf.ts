@@ -166,7 +166,7 @@ export async function generateProducerPdf(data: PdfData) {
     theme: 'plain',
     styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
-      ['Kg Secos Totales', 'En proceso'],
+      ['Kg Secos Totales', fmt(data.dryKg)],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
