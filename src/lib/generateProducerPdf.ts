@@ -401,16 +401,16 @@ export async function generateProducerPdf(data: PdfData) {
     let noteY = Math.max(lpEnd, rpEnd);
     if (data.needsDocument) {
       noteY += 2;
-      doc.setFontSize(6.5);
+      doc.setFontSize(6);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(130, 130, 130);
       const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
-      doc.text(
-        `* Monto neto = Total anticipos acumulados (USD ${fmt(cumulativeAdv)}) − Ya facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`,
-        rx + 2, noteY + 4
-      );
+      const noteText = `* Monto neto = Anticipos acum. (USD ${fmt(cumulativeAdv)}) - Facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`;
+      const maxW = halfW - 6;
+      const lines = doc.splitTextToSize(noteText, maxW);
+      doc.text(lines, rx + 2, noteY + 4);
       doc.setTextColor(0, 0, 0);
-      noteY += 6;
+      noteY += 3 + lines.length * 3;
     }
 
     const pH = Math.max(lpEnd, noteY) - pY + 1;
