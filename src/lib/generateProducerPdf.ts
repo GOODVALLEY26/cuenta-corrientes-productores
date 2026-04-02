@@ -313,64 +313,15 @@ export async function generateProducerPdf(data: PdfData) {
   y = aEnd + sp;
 
   // ═══════════════════════════════════════════
-  // 3. PRÓXIMO PAGO & DOCUMENTO REQUERIDO
+  // 3. DOCUMENTO REQUERIDO (left) & PRÓXIMO PAGO + USD POR FACTURAR (right)
   // ═══════════════════════════════════════════
   if (data.nextAdvance) {
     y = ensureSpace(doc, y, 50, m);
     const pY = y;
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
 
-    let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
-    const payRows: string[][] = [
-      ['Mes', nextMonth],
-      ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
-    ];
-    if (data.nextDiscount > 0) payRows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
-    payRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
-
-    // Add USD por facturar breakdown
-    if (data.needsDocument) {
-      const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
-      payRows.push(['', '']);
-      payRows.push(['Anticipos acum.', `USD ${fmt(cumulativeAdv)}`]);
-      payRows.push(['Ya facturado', `-USD ${fmt(data.totalInvoicedUsd)}`]);
-      payRows.push(['USD por Facturar', `USD ${fmt(data.docNeededUsd)}`]);
-    }
-
-    autoTable(doc, {
-      startY: lpY,
-      margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
-      tableWidth: halfW - 4,
-      theme: 'plain',
-      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
-      body: payRows,
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
-      didParseCell: (h) => {
-        if (h.section === 'body') {
-          const label = String(h.row.raw?.[0] ?? '');
-          if (label === 'Neto a Pagar') {
-            h.cell.styles.fontStyle = 'bold';
-            h.cell.styles.fillColor = [...MUTED_BG];
-            h.cell.styles.fontSize = 10;
-            h.cell.styles.textColor = [...PRIMARY];
-          }
-          if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
-          if (label === 'Ya facturado') h.cell.styles.textColor = [...ACCENT_RED];
-          if (label === 'USD por Facturar') {
-            h.cell.styles.fontStyle = 'bold';
-            h.cell.styles.textColor = [...PRIMARY];
-            h.cell.styles.fillColor = [...MUTED_BG];
-          }
-          if (label === 'Anticipos acum.' || label === 'Ya facturado') {
-            h.cell.styles.fontSize = 7;
-            h.cell.styles.textColor = [100, 100, 100];
-          }
-        }
-      },
-    });
-    const lpEnd = (doc as any).lastAutoTable.finalY;
-
-    let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
+    // LEFT: Documento Requerido
+    let lpY = sectionTitle(doc, lx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
       const tc = data.docExRate;
@@ -384,8 +335,8 @@ export async function generateProducerPdf(data: PdfData) {
         docRows.push(['Total Doc.', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
       }
       autoTable(doc, {
-        startY: rpY,
-        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        startY: lpY,
+        margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
         tableWidth: halfW - 4,
         theme: 'plain',
         styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
@@ -405,8 +356,8 @@ export async function generateProducerPdf(data: PdfData) {
       });
     } else {
       autoTable(doc, {
-        startY: rpY,
-        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        startY: lpY,
+        margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
         tableWidth: halfW - 4,
         theme: 'plain',
         styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
@@ -414,7 +365,76 @@ export async function generateProducerPdf(data: PdfData) {
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
     }
-    const rpEnd = (doc as any).lastAutoTable.finalY;
+    const lpEnd = (doc as any).lastAutoTable.finalY;
+
+    // RIGHT: Próximo Pago
+    let rpY = sectionTitle(doc, rx, pY, halfW, 'Próximo Pago');
+    const payRows: string[][] = [
+      ['Mes', nextMonth],
+      ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
+    ];
+    if (data.nextDiscount > 0) payRows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
+    payRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
+
+    autoTable(doc, {
+      startY: rpY,
+      margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+      tableWidth: halfW - 4,
+      theme: 'plain',
+      styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
+      body: payRows,
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
+      didParseCell: (h) => {
+        if (h.section === 'body') {
+          const label = String(h.row.raw?.[0] ?? '');
+          if (label === 'Neto a Pagar') {
+            h.cell.styles.fontStyle = 'bold';
+            h.cell.styles.fillColor = [...MUTED_BG];
+            h.cell.styles.fontSize = 10;
+            h.cell.styles.textColor = [...PRIMARY];
+          }
+          if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
+        }
+      },
+    });
+    let rpEnd = (doc as any).lastAutoTable.finalY;
+
+    // RIGHT: USD por Facturar (below Próximo Pago)
+    if (data.needsDocument) {
+      const facY = rpEnd + 2;
+      sectionTitle(doc, rx, facY, halfW, 'USD por Facturar');
+      const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
+      const facRows: string[][] = [
+        ['Anticipos acum.', `USD ${fmt(cumulativeAdv)}`],
+        ['Ya facturado', `-USD ${fmt(data.totalInvoicedUsd)}`],
+        ['USD por Facturar', `USD ${fmt(data.docNeededUsd)}`],
+      ];
+      autoTable(doc, {
+        startY: facY + 10,
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
+        theme: 'plain',
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
+        body: facRows,
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 34 }, 1: { halign: 'right' } },
+        didParseCell: (h) => {
+          if (h.section === 'body') {
+            const label = String(h.row.raw?.[0] ?? '');
+            if (label === 'Ya facturado') h.cell.styles.textColor = [...ACCENT_RED];
+            if (label === 'Anticipos acum.') {
+              h.cell.styles.fontSize = 7;
+              h.cell.styles.textColor = [100, 100, 100];
+            }
+            if (label === 'USD por Facturar') {
+              h.cell.styles.fontStyle = 'bold';
+              h.cell.styles.textColor = [...PRIMARY];
+              h.cell.styles.fillColor = [...MUTED_BG];
+            }
+          }
+        },
+      });
+      rpEnd = (doc as any).lastAutoTable.finalY;
+    }
 
     const pH = Math.max(lpEnd, rpEnd) - pY + 1;
     cardBorder(doc, lx, pY, halfW, pH);
