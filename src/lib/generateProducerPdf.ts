@@ -313,62 +313,15 @@ export async function generateProducerPdf(data: PdfData) {
   y = aEnd + sp;
 
   // ═══════════════════════════════════════════
-  // 3. DOCUMENTO REQUERIDO (left) & PRÓXIMO PAGO + USD POR FACTURAR (right)
+  // 3. PRÓXIMO PAGO + USD POR FACTURAR (left) & DOCUMENTO REQUERIDO (right)
   // ═══════════════════════════════════════════
   if (data.nextAdvance) {
     y = ensureSpace(doc, y, 50, m);
     const pY = y;
     const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
 
-    // LEFT: Documento Requerido
-    let lpY = sectionTitle(doc, lx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
-    if (data.needsDocument) {
-      const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
-      const tc = data.docExRate;
-      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
-      if (tc) {
-        const montoCLP = data.docNeededUsd * tc;
-        const iva = montoCLP * 0.19;
-        docRows.push(['T.C.', `$${Number(tc).toLocaleString('es-CL')}`]);
-        docRows.push(['Neto CLP', `CLP ${fmtClp(Math.round(montoCLP))}`]);
-        docRows.push(['IVA (19%)', `CLP ${fmtClp(Math.round(iva))}`]);
-        docRows.push(['Total Doc.', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
-      }
-      autoTable(doc, {
-        startY: lpY,
-        margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
-        tableWidth: halfW - 4,
-        theme: 'plain',
-        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
-        body: docRows,
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
-        didParseCell: (h) => {
-          if (h.section === 'body') {
-            const label = String(h.row.raw?.[0] ?? '');
-            if (label === 'Total Doc.') {
-              h.cell.styles.fontStyle = 'bold';
-              h.cell.styles.fillColor = [...MUTED_BG];
-              h.cell.styles.textColor = [...PRIMARY];
-            }
-            if (label === 'Tipo') { h.cell.styles.textColor = [...ACCENT_RED]; h.cell.styles.fontStyle = 'bold'; }
-          }
-        },
-      });
-    } else {
-      autoTable(doc, {
-        startY: lpY,
-        margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
-        tableWidth: halfW - 4,
-        theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
-        body: [['Facturación al día ✓']],
-        didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
-      });
-    }
-    const lpEnd = (doc as any).lastAutoTable.finalY;
-
-    // RIGHT: Próximo Pago
-    let rpY = sectionTitle(doc, rx, pY, halfW, 'Próximo Pago');
+    // LEFT: Próximo Pago
+    let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
     const payRows: string[][] = [
       ['Mes', nextMonth],
       ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
@@ -377,8 +330,8 @@ export async function generateProducerPdf(data: PdfData) {
     payRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
 
     autoTable(doc, {
-      startY: rpY,
-      margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+      startY: lpY,
+      margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
       tableWidth: halfW - 4,
       theme: 'plain',
       styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
@@ -397,12 +350,12 @@ export async function generateProducerPdf(data: PdfData) {
         }
       },
     });
-    let rpEnd = (doc as any).lastAutoTable.finalY;
+    let lpEnd = (doc as any).lastAutoTable.finalY;
 
-    // RIGHT: USD por Facturar (below Próximo Pago)
+    // LEFT: USD por Facturar (below Próximo Pago)
     if (data.needsDocument) {
-      const facY = rpEnd + 2;
-      sectionTitle(doc, rx, facY, halfW, 'USD por Facturar');
+      const facY = lpEnd + 2;
+      sectionTitle(doc, lx, facY, halfW, 'USD por Facturar');
       const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
       const facRows: string[][] = [
         ['Anticipos acum.', `USD ${fmt(cumulativeAdv)}`],
@@ -411,7 +364,7 @@ export async function generateProducerPdf(data: PdfData) {
       ];
       autoTable(doc, {
         startY: facY + 10,
-        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
         tableWidth: halfW - 4,
         theme: 'plain',
         styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
@@ -433,8 +386,55 @@ export async function generateProducerPdf(data: PdfData) {
           }
         },
       });
-      rpEnd = (doc as any).lastAutoTable.finalY;
+      lpEnd = (doc as any).lastAutoTable.finalY;
     }
+
+    // RIGHT: Documento Requerido
+    let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
+    if (data.needsDocument) {
+      const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
+      const tc = data.docExRate;
+      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
+      if (tc) {
+        const montoCLP = data.docNeededUsd * tc;
+        const iva = montoCLP * 0.19;
+        docRows.push(['T.C.', `$${Number(tc).toLocaleString('es-CL')}`]);
+        docRows.push(['Neto CLP', `CLP ${fmtClp(Math.round(montoCLP))}`]);
+        docRows.push(['IVA (19%)', `CLP ${fmtClp(Math.round(iva))}`]);
+        docRows.push(['Total Doc.', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
+      }
+      autoTable(doc, {
+        startY: rpY,
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
+        theme: 'plain',
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
+        body: docRows,
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'right' } },
+        didParseCell: (h) => {
+          if (h.section === 'body') {
+            const label = String(h.row.raw?.[0] ?? '');
+            if (label === 'Total Doc.') {
+              h.cell.styles.fontStyle = 'bold';
+              h.cell.styles.fillColor = [...MUTED_BG];
+              h.cell.styles.textColor = [...PRIMARY];
+            }
+            if (label === 'Tipo') { h.cell.styles.textColor = [...ACCENT_RED]; h.cell.styles.fontStyle = 'bold'; }
+          }
+        },
+      });
+    } else {
+      autoTable(doc, {
+        startY: rpY,
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
+        body: [['Facturación al día ✓']],
+        didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
+      });
+    }
+    const rpEnd = (doc as any).lastAutoTable.finalY;
 
     const pH = Math.max(lpEnd, rpEnd) - pY + 1;
     cardBorder(doc, lx, pY, halfW, pH);
