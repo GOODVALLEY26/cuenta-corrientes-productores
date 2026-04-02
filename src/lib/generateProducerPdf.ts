@@ -397,10 +397,26 @@ export async function generateProducerPdf(data: PdfData) {
     }
     const rpEnd = (doc as any).lastAutoTable.finalY;
 
-    const pH = Math.max(lpEnd, rpEnd) - pY + 1;
+    // Add footnote about document calculation
+    let noteY = Math.max(lpEnd, rpEnd);
+    if (data.needsDocument) {
+      noteY += 2;
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(130, 130, 130);
+      const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
+      doc.text(
+        `* Monto neto = Total anticipos acumulados (USD ${fmt(cumulativeAdv)}) − Ya facturado (USD ${fmt(data.totalInvoicedUsd)}) = USD ${fmt(data.docNeededUsd)}`,
+        rx + 2, noteY + 4
+      );
+      doc.setTextColor(0, 0, 0);
+      noteY += 6;
+    }
+
+    const pH = Math.max(lpEnd, noteY) - pY + 1;
     cardBorder(doc, lx, pY, halfW, pH);
     cardBorder(doc, rx, pY, halfW, pH);
-    y = Math.max(lpEnd, rpEnd) + sp;
+    y = Math.max(lpEnd, noteY) + sp;
   }
 
   // ═══════════════════════════════════════════
@@ -414,7 +430,8 @@ export async function generateProducerPdf(data: PdfData) {
   const ivaEnContra = data.ivaSecado;
   const saldoP = ivaAFavor - ivaEnContra;
 
-  const colW = (cw - 12) / 3;
+  const colW = (cw - 18) / 3;
+  const colGap = 3;
   const bY = iY + 12;
   const bH = 22;
 
@@ -425,7 +442,7 @@ export async function generateProducerPdf(data: PdfData) {
   ];
 
   boxes.forEach((b, i) => {
-    const bx = m + 3 + i * (colW + 6);
+    const bx = m + 3 + i * (colW + colGap);
     doc.setFillColor(...b.bg);
     doc.roundedRect(bx, bY, colW, bH, 2, 2, 'F');
     doc.setFontSize(7);
