@@ -5,6 +5,7 @@ const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 
 const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtClp = (n: number) => Math.round(n).toLocaleString('es-CL');
+const fmtKg = (n: number) => n.toLocaleString('es-CL', { maximumFractionDigits: 2 }) + ' kg';
 
 interface PdfData {
   producer: { name: string; rut?: string };
@@ -166,13 +167,13 @@ export async function generateProducerPdf(data: PdfData) {
     theme: 'plain',
     styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'ellipsize' },
     body: [
-      ['Kg Secos Totales', 'En proceso'],
+      ['Kg Secos Totales', fmtKg(data.dryKg)],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
-      if (h.row.index === 1 && h.column.index === 1 && h.section === 'body') {
+      if ((h.row.index === 0 || h.row.index === 1) && h.column.index === 1 && h.section === 'body') {
         h.cell.styles.fontStyle = 'bold';
         h.cell.styles.textColor = [...PRIMARY];
       }

@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FolderOpen, FileText, Loader2, RefreshCw, Download } from 'lucide-react';
+import { FolderOpen, FileText, Loader2, RefreshCw, Download, Copy, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const DRIVE_FOLDER_ID = '1ugXdx3lBftbpVYfGxCWbxaeAd25oXWt8';
+/** Si está definido, fuerza la carpeta (útil en local). Si no, el backend usa app_config.drive_drying_folder_id */
+const driveFolderPayload = () =>
+  import.meta.env.VITE_DRYING_INVOICES_DRIVE_FOLDER_ID
+    ? { folderId: String(import.meta.env.VITE_DRYING_INVOICES_DRIVE_FOLDER_ID).trim() }
+    : {};
 
 type DriveFile = {
   id: string;
@@ -15,6 +20,13 @@ type DriveFile = {
   createdTime: string;
   modifiedTime: string;
   size?: string;
+};
+
+type DriveSetupMeta = {
+  folderId: string;
+  authMode?: 'oauth' | 'service_account';
+  connectedEmail?: string;
+  serviceAccountEmail?: string;
 };
 
 type ParsedInvoice = {
@@ -39,11 +51,22 @@ interface DriveFileBrowserProps {
 
 const DriveFileBrowser = ({ open, onOpenChange, onInvoiceImported }: DriveFileBrowserProps) => {
   const [files, setFiles] = useState<DriveFile[]>([]);
+  const [driveMeta, setDriveMeta] = useState<DriveSetupMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState<string | null>(null);
 
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      toast.success('Correo copiado al portapapeles');
+    } catch {
+      toast.error('No se pudo copiar');
+    }
+  };
+
   const loadFiles = async () => {
     setLoading(true);
+    setDriveMeta(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-drive-files`, {
@@ -52,13 +75,18 @@ const DriveFileBrowser = ({ open, onOpenChange, onInvoiceImported }: DriveFileBr
           'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ folderId: DRIVE_FOLDER_ID }),
+        body: JSON.stringify(driveFolderPayload()),
       });
 
-      if (!res.ok) throw new Error('Error al listar archivos');
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        if (data.drive?.folderId) setDriveMeta(data.drive);
+        throw new Error(data.error);
+      }
+      if (!res.ok) throw new Error('Error al listar archivos');
       setFiles(data.files || []);
+      const em = data.drive?.connectedEmail || data.drive?.serviceAccountEmail;
+      setDriveMeta(data.drive?.folderId && em ? data.drive : null);
     } catch (err: any) {
       toast.error(err.message || 'Error conectando con Google Drive');
     } finally {
@@ -107,6 +135,57 @@ const DriveFileBrowser = ({ open, onOpenChange, onInvoiceImported }: DriveFileBr
           </DialogTitle>
         </DialogHeader>
 
+        {driveMeta && (() => {
+          const email = driveMeta.connectedEmail || driveMeta.serviceAccountEmail || '';
+          if (!email) return null;
+          const oauth = driveMeta.authMode === 'oauth';
+          return (
+            <Alert className="border-primary/30 bg-primary/5">
+              <Info className="h-4 w-4" />
+              <AlertTitle className="text-sm">
+                {oauth ? 'Cuenta con la que la app lee Drive' : 'Compartir la carpeta con esta cuenta'}
+              </AlertTitle>
+              <AlertDescription className="space-y-2 text-xs sm:text-sm">
+                {oauth ? (
+                  <p>
+                    Los PDF deben estar en una carpeta a la que tenga acceso esta cuenta de Google Workspace (solo correos
+                    de tu empresa). No uses la cuenta de servicio <code className="text-[11px]">…gserviceaccount.com</code>.
+                  </p>
+                ) : (
+                  <p>
+                    En Google Drive, abre la carpeta configurada y usa <strong>Compartir</strong>. Añade este correo (cuenta
+                    de servicio, no es una persona):
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background px-2 py-1.5 font-mono text-[11px] sm:text-xs break-all">
+                  <span className="flex-1 min-w-0">{email}</span>
+                  <Button type="button" variant="secondary" size="sm" className="shrink-0 h-7" onClick={() => copyEmail(email)}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+                {!oauth && (
+                  <p className="text-muted-foreground">
+                    Rol recomendado: <strong>Lector</strong>. ID de carpeta en la app:{' '}
+                    <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{driveMeta.folderId}</code>
+                  </p>
+                )}
+                {oauth && (
+                  <p className="text-muted-foreground">
+                    ID de carpeta configurada:{' '}
+                    <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{driveMeta.folderId}</code>
+                    {import.meta.env.VITE_DRYING_INVOICES_DRIVE_FOLDER_ID ? (
+                      <span className="block mt-1 text-amber-700 dark:text-amber-500">
+                        (local: <code className="text-[11px]">VITE_DRYING_INVOICES_DRIVE_FOLDER_ID</code>)
+                      </span>
+                    ) : null}
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          );
+        })()}
+
         <div className="flex justify-end mb-2">
           <Button variant="outline" size="sm" onClick={loadFiles} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -124,7 +203,10 @@ const DriveFileBrowser = ({ open, onOpenChange, onInvoiceImported }: DriveFileBr
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
               <p>No se encontraron archivos PDF en la carpeta</p>
-              <p className="text-xs mt-1">Asegúrate de compartir la carpeta con la cuenta de servicio</p>
+              <p className="text-xs mt-2 max-w-md mx-auto">
+                Si acabas de compartir la carpeta, espera unos segundos y pulsa <strong>Actualizar</strong>. Comprueba que
+                los PDF estén directamente en esa carpeta (no solo en subcarpetas).
+              </p>
             </div>
           ) : (
             <Table>

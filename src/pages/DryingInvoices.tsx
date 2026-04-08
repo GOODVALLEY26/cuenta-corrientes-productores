@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -7,19 +8,30 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, FileText, Upload, Eye, Loader2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, FileText, Upload, Eye, Loader2, FolderOpen, Copy, Info, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import DriveFileBrowser from '@/components/DriveFileBrowser';
 
 type Producer = { id: string; name: string; rut: string | null };
+
+type DriveConnectionStatus = {
+  authMode: 'oauth' | 'service_account' | 'none';
+  connectedEmail: string;
+  oauthConnected: boolean;
+  oauthClientConfigured: boolean;
+  serviceAccountConfigured: boolean;
+  serviceAccountEmail?: string;
+};
 
 const STATUS_LABELS: Record<string, string> = { pendiente: 'Pendiente', pagada: 'Pagada', parcial: 'Parcial' };
 const STATUS_COLORS: Record<string, string> = { pendiente: 'destructive', pagada: 'default', parcial: 'secondary' };
 
 const DryingInvoices = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [producers, setProducers] = useState<Producer[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -31,6 +43,46 @@ const DryingInvoices = () => {
   const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({ producer_id: '', invoice_number: '', amount_clp: '', iva_clp: '', exchange_rate: '', payment_method: 'cuotas_clp' as 'cuotas_usd' | 'cuotas_clp' | 'liquidacion_final', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [driveStatus, setDriveStatus] = useState<DriveConnectionStatus | null>(null);
+  const [driveStatusLoading, setDriveStatusLoading] = useState(false);
+  const [driveStatusHint, setDriveStatusHint] = useState<string | null>(null);
+  const [oauthBusy, setOauthBusy] = useState(false);
+
+  const loadDriveStatus = useCallback(async () => {
+    if (!user) return;
+    setDriveStatusLoading(true);
+    setDriveStatusHint(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/drive-service-account-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (data.error) {
+        setDriveStatus(null);
+        setDriveStatusHint(data.error);
+        return;
+      }
+      setDriveStatus({
+        authMode: data.authMode ?? 'none',
+        connectedEmail: data.connectedEmail ?? '',
+        oauthConnected: !!data.oauthConnected,
+        oauthClientConfigured: !!data.oauthClientConfigured,
+        serviceAccountConfigured: !!data.serviceAccountConfigured,
+        serviceAccountEmail: data.serviceAccountEmail,
+      });
+    } catch {
+      setDriveStatus(null);
+      setDriveStatusHint('No se pudo cargar el estado de Drive. ¿Están desplegadas las funciones en Supabase?');
+    } finally {
+      setDriveStatusLoading(false);
+    }
+  }, [user]);
 
   const load = async () => {
     const [p, i] = await Promise.all([
@@ -42,6 +94,90 @@ const DryingInvoices = () => {
   };
 
   useEffect(() => { if (user) load(); }, [user]);
+
+  useEffect(() => {
+    if (user) loadDriveStatus();
+  }, [user, loadDriveStatus]);
+
+  useEffect(() => {
+    const ok = searchParams.get('drive_connected');
+    const err = searchParams.get('drive_error');
+    if (!ok && !err) return;
+    const next = new URLSearchParams(searchParams);
+    if (ok) {
+      toast.success('Google Drive quedó conectado con tu cuenta empresa.');
+      next.delete('drive_connected');
+      loadDriveStatus();
+    }
+    if (err) {
+      toast.error(decodeURIComponent(err));
+      next.delete('drive_error');
+    }
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, loadDriveStatus]);
+
+  const copyConnectedEmail = async () => {
+    const em = driveStatus?.connectedEmail;
+    if (!em) return;
+    try {
+      await navigator.clipboard.writeText(em);
+      toast.success('Correo copiado');
+    } catch {
+      toast.error('No se pudo copiar');
+    }
+  };
+
+  const startGoogleDriveOAuth = async () => {
+    setOauthBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/drive-oauth-start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      toast.error(data.error || 'No se pudo iniciar la conexión con Google');
+    } catch {
+      toast.error('Error al conectar con Google');
+    } finally {
+      setOauthBusy(false);
+    }
+  };
+
+  const disconnectGoogleDrive = async () => {
+    if (!confirm('¿Desconectar la cuenta de Google Drive? Podrás volver a conectar después.')) return;
+    setOauthBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/drive-oauth-disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        toast.error(data.error || 'No se pudo desconectar');
+        return;
+      }
+      toast.success('Cuenta de Drive desconectada');
+      loadDriveStatus();
+    } catch {
+      toast.error('Error al desconectar');
+    } finally {
+      setOauthBusy(false);
+    }
+  };
 
   const parseInvoicePdf = async (file: File) => {
     setParsing(true);
@@ -262,7 +398,13 @@ const DryingInvoices = () => {
           <h1 className="text-2xl font-bold">Facturas de Secado</h1>
           <p className="text-muted-foreground">Sube el PDF y el sistema lee Neto + IVA automáticamente</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {driveStatus?.oauthClientConfigured && !driveStatus.oauthConnected && (
+            <Button variant="secondary" onClick={startGoogleDriveOAuth} disabled={oauthBusy}>
+              <Link2 className="h-4 w-4 mr-2" />
+              {oauthBusy ? 'Abriendo Google…' : 'Conectar cuenta Google (empresa)'}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setDriveOpen(true)}>
             <FolderOpen className="h-4 w-4 mr-2" />Importar de Drive
           </Button>
@@ -271,6 +413,74 @@ const DryingInvoices = () => {
           </Button>
         </div>
       </div>
+
+      {(driveStatusLoading || driveStatus || driveStatusHint) && (
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4" />
+          <AlertTitle className="text-sm">Google Drive e importación de PDF</AlertTitle>
+          <AlertDescription className="text-sm space-y-3">
+            {driveStatusLoading && !driveStatus && !driveStatusHint ? (
+              <p className="text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Cargando…
+              </p>
+            ) : driveStatusHint ? (
+              <p className="text-muted-foreground">{driveStatusHint}</p>
+            ) : driveStatus?.authMode === 'oauth' ? (
+              <>
+                <p>
+                  <strong>Modo recomendado (cuenta empresa).</strong> La app lee Drive usando la cuenta{' '}
+                  <strong>{driveStatus.connectedEmail}</strong>. Pon los PDF en una carpeta a la que{' '}
+                  <em>esa misma cuenta</em> tenga acceso (solo hace falta compartir entre personas de tu empresa, no con
+                  robots).
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background px-2 py-1.5 font-mono text-xs break-all flex-1 min-w-[12rem]">
+                    <span className="flex-1 min-w-0">{driveStatus.connectedEmail}</span>
+                    <Button type="button" variant="secondary" size="sm" className="shrink-0 h-8" onClick={copyConnectedEmail}>
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      Copiar
+                    </Button>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" className="h-8" onClick={disconnectGoogleDrive} disabled={oauthBusy}>
+                    <Unlink className="h-3.5 w-3.5 mr-1" />
+                    Desconectar
+                  </Button>
+                </div>
+              </>
+            ) : driveStatus?.authMode === 'service_account' && driveStatus.connectedEmail ? (
+              <>
+                <p>
+                  <strong>Modo cuenta de servicio.</strong> Si tu empresa bloquea compartir con correos{' '}
+                  <code className="text-[11px]">…gserviceaccount.com</code>, usa el botón{' '}
+                  <strong>Conectar cuenta Google (empresa)</strong> arriba.
+                </p>
+                <p>
+                  Si pueden compartir con servicio: añade este correo a la carpeta con rol <strong>Lector</strong>.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background px-2 py-1.5 font-mono text-xs break-all">
+                  <span className="flex-1 min-w-0">{driveStatus.connectedEmail}</span>
+                  <Button type="button" variant="secondary" size="sm" className="shrink-0 h-8" onClick={copyConnectedEmail}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </>
+            ) : driveStatus?.oauthClientConfigured ? (
+              <p className="text-muted-foreground">
+                Pulsa <strong>Conectar cuenta Google (empresa)</strong> e inicia sesión con el usuario de Goodvalley que debe
+                ver la carpeta de facturas (por ejemplo <code className="text-xs">secado-pdfs@tu-dominio.com</code>). Luego
+                comparte la carpeta solo con correos internos como siempre.
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                Para usar Drive, un administrador debe configurar en Supabase los secretos OAuth de Google y desplegar las
+                funciones <code className="text-xs">drive-oauth-start</code> y <code className="text-xs">drive-oauth-callback</code>,
+                o bien dejar configurada la cuenta de servicio en <code className="text-xs">google_sa_b64</code>.
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardContent className="p-0">
