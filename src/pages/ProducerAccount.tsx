@@ -50,8 +50,14 @@ const ProducerAccount = () => {
     const installmentPayments = instPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
-    const totalInvoicedUsd = prodInvoices.reduce((s, i) => s + Number(i.amount_usd), 0);
-    const totalInvoicedClp = prodInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
+    const totalInvoicedUsd = prodInvoices.reduce((s, i) => {
+      const amount = Number(i.amount_usd);
+      return i.document_type === 'nota_credito' ? s - amount : s + amount;
+    }, 0);
+    const totalInvoicedClp = prodInvoices.reduce((s, i) => {
+      const amount = Number(i.amount_clp);
+      return i.document_type === 'nota_credito' ? s - amount : s + amount;
+    }, 0);
 
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
