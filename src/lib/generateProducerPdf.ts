@@ -295,14 +295,6 @@ export async function generateProducerPdf(data: PdfData) {
           const val = String(h.cell.raw);
           if (val.includes('Pagado')) h.cell.styles.textColor = [...ACCENT_GREEN];
         }
-        // "Sin TC" cells in muted style
-        if (showDiscount && (h.column.index === 3 || h.column.index === 4)) {
-          const val = String(h.cell.raw);
-          if (val === 'Sin TC') {
-            h.cell.styles.textColor = [150, 150, 150];
-            h.cell.styles.fontStyle = 'italic';
-          }
-        }
       }
     },
   });
