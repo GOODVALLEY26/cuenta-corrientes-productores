@@ -78,8 +78,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     )
-  } catch (error) {
-    console.error("Error:", error.message)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("Error:", msg)
     const payload: {
       error: string
       drive?: {
@@ -88,7 +89,7 @@ serve(async (req) => {
         connectedEmail: string
         serviceAccountEmail: string
       }
-    } = { error: error.message }
+    } = { error: msg }
     if (folderId && connectedEmail) {
       payload.drive = {
         folderId,
