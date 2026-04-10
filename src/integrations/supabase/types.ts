@@ -452,7 +452,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      document_type: "factura" | "nota_debito"
+      document_type: "factura" | "nota_debito" | "nota_credito"
       drying_payment_method:
         | "descuento_usd"
         | "pago_clp"
@@ -586,7 +586,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      document_type: ["factura", "nota_debito"],
+      document_type: ["factura", "nota_debito", "nota_credito"],
       drying_payment_method: [
         "descuento_usd",
         "pago_clp",
