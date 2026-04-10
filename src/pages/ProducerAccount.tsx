@@ -296,9 +296,17 @@ const ProducerAccount = () => {
                   )}
                   {data.hasCuotasUsd && data.nextAdvance && (() => {
                     const m = data.nextAdvance.month;
-                    const tc = data.cuotaTcByMonth?.[m];
-                    const clp = data.cuotaClpByMonth?.[m] ?? data.cuotaClp;
+                    const clp = data.cuotaClpByMonth?.[m] ?? 0;
                     const usd = data.cuotaUsdByMonth?.[m] ?? 0;
+                    const tc = data.cuotaTcByMonth?.[m];
+                    if (clp === 0) {
+                      return (
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Descuento secado</TableCell>
+                          <TableCell className="text-right text-muted-foreground italic">Sin cuota este mes</TableCell>
+                        </TableRow>
+                      );
+                    }
                     return (
                       <>
                         <TableRow className="bg-primary/5">
