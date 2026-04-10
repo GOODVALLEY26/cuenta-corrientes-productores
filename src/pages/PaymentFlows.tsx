@@ -85,7 +85,10 @@ const PaymentFlows = () => {
         // Check producer invoiced amount
         const producerInvoicedUsd = prodInvoices
           .filter(i => i.producer_id === producer.id)
-          .reduce((s, i) => s + Number(i.amount_usd), 0);
+          .reduce((s, i) => {
+            const amt = Number(i.amount_usd);
+            return (i as any).document_type === 'nota_credito' ? s - amt : s + amt;
+          }, 0);
 
         // Document logic
         const requiresDocument = producerInvoicedUsd < advanceUsd;
