@@ -296,9 +296,17 @@ const ProducerAccount = () => {
                   )}
                   {data.hasCuotasUsd && data.nextAdvance && (() => {
                     const m = data.nextAdvance.month;
-                    const tc = data.cuotaTcByMonth?.[m];
-                    const clp = data.cuotaClpByMonth?.[m] ?? data.cuotaClp;
+                    const clp = data.cuotaClpByMonth?.[m] ?? 0;
                     const usd = data.cuotaUsdByMonth?.[m] ?? 0;
+                    const tc = data.cuotaTcByMonth?.[m];
+                    if (clp === 0) {
+                      return (
+                        <TableRow className="bg-primary/5">
+                          <TableCell className="font-medium">Descuento secado</TableCell>
+                          <TableCell className="text-right text-muted-foreground italic">Sin cuota este mes</TableCell>
+                        </TableRow>
+                      );
+                    }
                     return (
                       <>
                         <TableRow className="bg-primary/5">
@@ -344,16 +352,14 @@ const ProducerAccount = () => {
                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
-                     const hasTc = !data.hasCuotasUsd || data.cuotaTcByMonth?.[a.month] != null;
-                     const net = hasTc ? a.advance - discount : 0;
-                     const showDiscount = hasTc && discount > 0;
+                     const net = a.advance - discount;
                      return (
                        <TableRow key={a.month}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
                          <TableCell className="text-right">{fmtDec(a.centsPerKg / 100)}</TableCell>
                          <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
-                         <TableCell className="text-right text-destructive">{showDiscount ? `-USD ${fmt(discount)}` : !hasTc ? <span className="text-muted-foreground italic text-xs">Sin TC</span> : '-'}</TableCell>
-                         <TableCell className="text-right font-bold">{hasTc ? `USD ${fmt(net)}` : <span className="text-muted-foreground italic text-xs">Sin TC</span>}</TableCell>
+                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
                          <TableCell className="text-center">
                            <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
                              {a.paid ? 'Pagado' : 'Pendiente'}
