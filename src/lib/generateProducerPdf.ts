@@ -251,9 +251,13 @@ export async function generateProducerPdf(data: PdfData) {
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
     return row;
   });
-  const totalRow: string[] = ['TOTAL', '', `USD ${fmt(data.totalAdvances)}`];
-  if (showDiscount) totalRow.push('', '');
-  totalRow.push(`Pagado: USD ${fmt(data.paidAdvances)}`);
+  const totalUsdKg = data.advances.reduce((s, a) => s + a.centsPerKg / 100, 0);
+  const totalDiscount = data.advances.reduce((s, a) => s + (data.discountByMonth[a.month] ?? 0), 0);
+  const totalNet = data.totalAdvances - totalDiscount;
+  const paidNetSum = data.advances.filter(a => a.paid).reduce((s, a) => s + a.advance - (data.discountByMonth[a.month] ?? 0), 0);
+  const totalRow: string[] = ['TOTAL', fmt(totalUsdKg), `USD ${fmt(data.totalAdvances)}`];
+  if (showDiscount) totalRow.push(`-USD ${fmt(totalDiscount)}`, `USD ${fmt(totalNet)}`);
+  totalRow.push(`USD ${fmt(paidNetSum)}`);
   totalRow.push('');
   advRows.push(totalRow);
 
@@ -421,7 +425,7 @@ export async function generateProducerPdf(data: PdfData) {
         tableWidth: halfW - 4,
         theme: 'plain',
         styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
-        body: [['Facturación al día ✓']],
+        body: [['Facturación al día']],
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
     }
