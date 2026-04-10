@@ -213,7 +213,7 @@ const ProducerInvoices = () => {
                   <TableCell className="font-medium">{inv.producers?.name}</TableCell>
                   <TableCell>
                     <Badge variant={inv.document_type === 'factura' ? 'default' : 'secondary'}>
-                      {inv.document_type === 'factura' ? 'Factura' : 'Nota de Débito'}
+                      {inv.document_type === 'factura' ? 'Factura' : inv.document_type === 'nota_credito' ? 'Nota de Crédito' : 'Nota de Débito'}
                     </Badge>
                   </TableCell>
                   <TableCell>{inv.invoice_number ?? '-'}</TableCell>
@@ -284,6 +284,7 @@ const ProducerInvoices = () => {
                 <SelectContent>
                   <SelectItem value="factura">Factura</SelectItem>
                   <SelectItem value="nota_debito">Nota de Débito</SelectItem>
+                  <SelectItem value="nota_credito">Nota de Crédito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
