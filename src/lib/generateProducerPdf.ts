@@ -247,7 +247,7 @@ export async function generateProducerPdf(data: PdfData) {
       row.push(discount > 0 ? `-USD ${fmt(discount)}` : '-');
       row.push(`USD ${fmt(net)}`);
     }
-    row.push(a.paid ? '✓ Pagado' : 'Pendiente');
+    row.push(a.paid ? 'Pagado' : 'Pendiente');
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
     return row;
   });
