@@ -88,26 +88,38 @@ const ProducerAccount = () => {
 
     if (hasCuotasUsd) {
       for (const adv of advances) {
-        const inst = installmentPayments.find((p: any) => p.month === adv.month);
-        const monthExRate = exRates.find(e => e.month === adv.month);
-        if (inst && inst.paid && inst.amount_usd) {
-          discountByMonth[adv.month] = Number(inst.amount_usd);
-          cuotaTcByMonth[adv.month] = inst.exchange_rate ? Number(inst.exchange_rate) : null;
-          cuotaClpByMonth[adv.month] = Number(inst.amount_clp);
-          cuotaUsdByMonth[adv.month] = Number(inst.amount_usd);
-        } else if (monthExRate) {
-          const tc = Number(monthExRate.rate);
-          const usdAmount = cuotaClp / tc;
-          discountByMonth[adv.month] = usdAmount;
-          cuotaTcByMonth[adv.month] = tc;
-          cuotaClpByMonth[adv.month] = cuotaClp;
-          cuotaUsdByMonth[adv.month] = usdAmount;
-        } else {
-          // No TC available - leave discount empty
+        const monthInsts = installmentPayments.filter((p: any) => p.month === adv.month);
+        if (monthInsts.length === 0) {
           discountByMonth[adv.month] = 0;
           cuotaTcByMonth[adv.month] = null;
-          cuotaClpByMonth[adv.month] = cuotaClp;
+          cuotaClpByMonth[adv.month] = 0;
           cuotaUsdByMonth[adv.month] = 0;
+          continue;
+        }
+        const paidInsts = monthInsts.filter((p: any) => p.paid && p.amount_usd);
+        if (paidInsts.length > 0) {
+          const totalPaidUsd = paidInsts.reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
+          const totalPaidClp = paidInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+          discountByMonth[adv.month] = totalPaidUsd;
+          cuotaTcByMonth[adv.month] = paidInsts[0].exchange_rate ? Number(paidInsts[0].exchange_rate) : null;
+          cuotaClpByMonth[adv.month] = totalPaidClp;
+          cuotaUsdByMonth[adv.month] = totalPaidUsd;
+        } else {
+          const totalInstClp = monthInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+          const monthExRate = exRates.find(e => e.month === adv.month);
+          if (monthExRate) {
+            const tc = Number(monthExRate.rate);
+            const usdAmount = totalInstClp / tc;
+            discountByMonth[adv.month] = usdAmount;
+            cuotaTcByMonth[adv.month] = tc;
+            cuotaClpByMonth[adv.month] = totalInstClp;
+            cuotaUsdByMonth[adv.month] = usdAmount;
+          } else {
+            discountByMonth[adv.month] = 0;
+            cuotaTcByMonth[adv.month] = null;
+            cuotaClpByMonth[adv.month] = totalInstClp;
+            cuotaUsdByMonth[adv.month] = 0;
+          }
         }
       }
     } else if (method === 'descuento_usd') {
