@@ -178,7 +178,7 @@ const PaymentFlows = () => {
                     {f.requires_document ? (
                       <div>
                         <Badge variant="destructive">
-                          {f.document_type_needed === 'nota_debito' ? 'Nota de Débito' : 'Factura'}
+                          {f.document_type_needed === 'nota_debito' ? 'Nota de Débito' : f.document_type_needed === 'nota_credito' ? 'Nota de Crédito' : 'Factura'}
                         </Badge>
                         <span className="text-xs text-muted-foreground ml-2">
                           USD {Number(f.document_amount_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}
