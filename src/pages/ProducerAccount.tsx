@@ -242,7 +242,7 @@ const ProducerAccount = () => {
               <Table>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">Kg Secos Totales</TableCell>
+                    <TableCell className="font-medium">Kilos deshidratados totales</TableCell>
                     <TableCell className="text-right font-bold text-primary">
                       {Number(data.dryKg).toLocaleString('es-CL', { maximumFractionDigits: 2 })} kg
                     </TableCell>
