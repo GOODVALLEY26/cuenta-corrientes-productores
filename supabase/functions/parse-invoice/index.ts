@@ -41,7 +41,7 @@ Extrae la siguiente información y devuelve SOLO un JSON válido (sin markdown):
   "iva_clp": número del IVA en CLP (solo número, sin puntos ni comas),
   "date": "YYYY-MM-DD",
   "exchange_rate": número o null si no aparece tipo de cambio,
-  "document_type": "factura" o "nota_debito",
+  "document_type": "factura", "nota_debito" o "nota_credito",
   "notes": "observaciones relevantes o null"
 }
 IMPORTANTE: Separa siempre el monto NETO del IVA. El monto total = neto + IVA.
