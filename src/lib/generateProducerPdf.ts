@@ -171,7 +171,7 @@ export async function generateProducerPdf(data: PdfData) {
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
       ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 38 }, 1: { halign: 'right' } },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
       if ((h.row.index === 0 || h.row.index === 1) && h.column.index === 1 && h.section === 'body') {
         h.cell.styles.fontStyle = 'bold';
@@ -195,7 +195,7 @@ export async function generateProducerPdf(data: PdfData) {
     const clpVal = data.cuotaClpByMonth?.[nm] ?? data.cuotaClp ?? 0;
     const usdVal = data.cuotaUsdByMonth?.[nm] ?? 0;
     secadoBody.push(['Cuota mensual CLP', `CLP ${fmtClp(clpVal)}`]);
-    secadoBody.push(['TC utilizado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
+    secadoBody.push(['TC observado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
     secadoBody.push(['Cuota en USD', tc ? `USD ${fmt(usdVal)}` : 'Pendiente TC']);
   } else if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
     secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
@@ -241,13 +241,11 @@ export async function generateProducerPdf(data: PdfData) {
 
   const advRows = data.advances.map(a => {
     const discount = data.discountByMonth[a.month] ?? 0;
-    const hasTc = !data.hasCuotasUsd || data.cuotaTcByMonth?.[a.month] != null;
-    const net = hasTc ? a.advance - discount : 0;
-    const showDiscountVal = hasTc && discount > 0;
+    const net = a.advance - discount;
     const row: string[] = [MONTHS_FULL[a.month - 1], fmt(a.centsPerKg / 100), `USD ${fmt(a.advance)}`];
     if (showDiscount) {
-      row.push(showDiscountVal ? `-USD ${fmt(discount)}` : (!hasTc ? 'Sin TC' : '-'));
-      row.push(hasTc ? `USD ${fmt(net)}` : 'Sin TC');
+      row.push(discount > 0 ? `-USD ${fmt(discount)}` : '-');
+      row.push(`USD ${fmt(net)}`);
     }
     row.push(a.paid ? '✓ Pagado' : 'Pendiente');
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
@@ -296,14 +294,6 @@ export async function generateProducerPdf(data: PdfData) {
         if (h.column.index === statusCol) {
           const val = String(h.cell.raw);
           if (val.includes('Pagado')) h.cell.styles.textColor = [...ACCENT_GREEN];
-        }
-        // "Sin TC" cells in muted style
-        if (showDiscount && (h.column.index === 3 || h.column.index === 4)) {
-          const val = String(h.cell.raw);
-          if (val === 'Sin TC') {
-            h.cell.styles.textColor = [150, 150, 150];
-            h.cell.styles.fontStyle = 'italic';
-          }
         }
       }
     },
