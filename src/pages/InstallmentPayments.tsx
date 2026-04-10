@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, RefreshCw, Plus } from 'lucide-react';
+import { Check, RefreshCw, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -164,6 +164,14 @@ const InstallmentPayments = () => {
     })
     .filter(Boolean) as any[];
 
+  const deleteInstallmentsForProducer = async (producerId: string) => {
+    if (!confirm('¿Estás seguro de que quieres borrar todas las cuotas de este productor?')) return;
+    const { error } = await supabase.from('installment_payments').delete().eq('producer_id', producerId).eq('year', year);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Cuotas eliminadas');
+    loadData();
+  };
+
   const selectedProducer = producers.find(p => p.id === genDialog.producerId);
 
   return (
@@ -201,6 +209,11 @@ const InstallmentPayments = () => {
                   <Button size="sm" variant="outline" onClick={() => openGenerateDialog(producer.id)}>
                     <Plus className="h-3 w-3 mr-1" /> Generar Cuotas
                   </Button>
+                  {insts.length > 0 && (
+                    <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => deleteInstallmentsForProducer(producer.id)}>
+                      <Trash2 className="h-3 w-3 mr-1" /> Borrar Cuotas
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
