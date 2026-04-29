@@ -76,6 +76,27 @@ export type Database = {
         }
         Relationships: []
       }
+      company_account: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+        }
+        Relationships: []
+      }
       dry_kg_reports: {
         Row: {
           created_at: string
@@ -449,7 +470,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      shared_account_user_id: { Args: never; Returns: string }
     }
     Enums: {
       document_type: "factura" | "nota_debito" | "nota_credito"
