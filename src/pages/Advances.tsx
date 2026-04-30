@@ -164,7 +164,7 @@ const Advances = () => {
                         {isEditing ? (
                           <Input
                             type="number"
-                            step="0.01"
+                            step="any"
                             className="h-8 w-16 text-center mx-auto text-sm"
                             value={editValue}
                             onChange={e => setEditValue(e.target.value)}
