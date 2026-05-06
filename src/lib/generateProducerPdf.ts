@@ -13,7 +13,7 @@ interface PdfData {
   dryKg: number;
   totalInvoicedUsd: number;
   totalInvoicedClp: number;
-  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null }[];
+  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null; netClp?: number | null }[];
   totalAdvances: number;
   paidAdvances: number;
   nextAdvance: { month: number; centsPerKg: number; advance: number } | null;
@@ -42,6 +42,7 @@ interface PdfData {
   cuotaClpByMonth?: Record<number, number>;
   cuotaUsdByMonth?: Record<number, number>;
   prodInvoices?: any[];
+  isSpecial?: boolean;
 }
 
 const methodLabel: Record<string, string> = {
@@ -235,17 +236,34 @@ export async function generateProducerPdf(data: PdfData) {
   // 2. ANTICIPOS
   // ═══════════════════════════════════════════
   const showDiscount = Object.values(data.discountByMonth).some(v => v > 0) || data.hasCuotasUsd;
+  const showSpecialCols = !!data.isSpecial;
   const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
   if (showDiscount) advHeaders.push('Desc. Secado', 'Neto USD');
+  if (showSpecialCols) advHeaders.push('Neto CLP', 'TC');
   advHeaders.push('Estado', 'Fecha Pago');
 
-  const advRows = data.advances.map(a => {
+  const sortedAdvances = showSpecialCols
+    ? [...data.advances].sort((a, b) => {
+        if (a.paidDate && b.paidDate) return a.paidDate.localeCompare(b.paidDate);
+        if (a.paidDate) return -1;
+        if (b.paidDate) return 1;
+        return a.month - b.month;
+      })
+    : data.advances;
+
+  const advRows = sortedAdvances.map(a => {
     const discount = data.discountByMonth[a.month] ?? 0;
     const net = a.advance - discount;
     const row: string[] = [MONTHS_FULL[a.month - 1], fmt(a.centsPerKg / 100), `USD ${fmt(a.advance)}`];
     if (showDiscount) {
       row.push(discount > 0 ? `-USD ${fmt(discount)}` : '-');
       row.push(`USD ${fmt(net)}`);
+    }
+    if (showSpecialCols) {
+      const netClp = a.netClp ?? null;
+      const tc = netClp && net > 0 ? netClp / net : null;
+      row.push(netClp ? `CLP ${fmtClp(netClp)}` : '-');
+      row.push(tc ? `$${tc.toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '-');
     }
     row.push(a.paid ? 'Pagado' : 'Pendiente');
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
@@ -255,8 +273,13 @@ export async function generateProducerPdf(data: PdfData) {
   const totalDiscount = data.advances.reduce((s, a) => s + (data.discountByMonth[a.month] ?? 0), 0);
   const totalNet = data.totalAdvances - totalDiscount;
   const paidNetSum = data.advances.filter(a => a.paid).reduce((s, a) => s + a.advance - (data.discountByMonth[a.month] ?? 0), 0);
+  const totalNetClp = data.advances.reduce((s, a) => s + (a.netClp ?? 0), 0);
   const totalRow: string[] = ['TOTAL', fmt(totalUsdKg), `USD ${fmt(data.totalAdvances)}`];
   if (showDiscount) totalRow.push(`-USD ${fmt(totalDiscount)}`, `USD ${fmt(totalNet)}`);
+  if (showSpecialCols) {
+    totalRow.push(totalNetClp > 0 ? `CLP ${fmtClp(totalNetClp)}` : '-');
+    totalRow.push('');
+  }
   totalRow.push(`USD ${fmt(paidNetSum)}`);
   totalRow.push('');
   advRows.push(totalRow);
@@ -264,7 +287,7 @@ export async function generateProducerPdf(data: PdfData) {
   y = ensureSpace(doc, y, 40, m);
   const aY = y;
   sectionTitle(doc, m, aY, cw, `Anticipos ${data.year}`);
-  const statusCol = showDiscount ? 5 : 3;
+  const statusCol = 3 + (showDiscount ? 2 : 0) + (showSpecialCols ? 2 : 0);
 
   autoTable(doc, {
     startY: aY + 10,
@@ -275,20 +298,25 @@ export async function generateProducerPdf(data: PdfData) {
     styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
     head: [advHeaders],
     body: advRows,
-    columnStyles: {
-      0: { fontStyle: 'bold' },
-      1: { halign: 'right' },
-      2: { halign: 'right' },
-      ...(showDiscount ? {
-        3: { halign: 'right', textColor: [...ACCENT_RED] },
-        4: { halign: 'right', fontStyle: 'bold' },
-        5: { halign: 'center' },
-        6: { halign: 'center' },
-      } : {
-        3: { halign: 'center' },
-        4: { halign: 'center' },
-      }),
-    },
+    columnStyles: (() => {
+      const cs: any = {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+      };
+      let i = 3;
+      if (showDiscount) {
+        cs[i++] = { halign: 'right', textColor: [...ACCENT_RED] };
+        cs[i++] = { halign: 'right', fontStyle: 'bold' };
+      }
+      if (showSpecialCols) {
+        cs[i++] = { halign: 'right' };
+        cs[i++] = { halign: 'right' };
+      }
+      cs[i++] = { halign: 'center' };
+      cs[i++] = { halign: 'center' };
+      return cs;
+    })(),
     didParseCell: (h) => {
       if (h.section === 'body') {
         if (h.row.index === advRows.length - 1) {
