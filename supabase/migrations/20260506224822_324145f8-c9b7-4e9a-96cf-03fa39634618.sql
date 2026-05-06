@@ -1,0 +1,1 @@
+ALTER TABLE public.advance_rates DROP CONSTRAINT IF EXISTS advance_rates_producer_id_month_year_key;
