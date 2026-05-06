@@ -233,6 +233,48 @@ const ProducerAccount = () => {
   const effectiveTc = data ? (docTcOverride !== '' ? Number(docTcOverride) : data.docExRate) : null;
   const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
 
+  const selectedProducer = producers.find(p => p.id === selectedId);
+  const isSpecial = selectedProducer?.name === SPECIAL_PRODUCER_NAME;
+
+  const saveTc = async (advanceId: string) => {
+    const val = tcEditValue === '' ? null : Number(tcEditValue);
+    if (val !== null && isNaN(val)) { toast.error('TC inválido'); return; }
+    const { error } = await supabase
+      .from('advance_rates')
+      .update({ exchange_rate: val } as any)
+      .eq('id', advanceId);
+    if (error) { toast.error('Error al guardar TC'); return; }
+    setEditingTcId(null);
+    setTcEditValue('');
+    loadData();
+  };
+
+  const addAdvance = async () => {
+    const cents = Number(newAdvCents);
+    if (!cents || isNaN(cents)) { toast.error('Ingresa ¢/kg'); return; }
+    const tc = newAdvTc === '' ? null : Number(newAdvTc);
+    const { error } = await supabase.from('advance_rates').insert({
+      producer_id: selectedId,
+      year,
+      month: newAdvMonth,
+      cents_per_kg: cents,
+      user_id: user!.id,
+      exchange_rate: tc,
+    } as any);
+    if (error) { toast.error('Error al agregar anticipo'); return; }
+    setAddOpen(false);
+    setNewAdvCents('');
+    setNewAdvTc('');
+    loadData();
+  };
+
+  const deleteAdvance = async (id: string) => {
+    if (!confirm('¿Eliminar este anticipo?')) return;
+    const { error } = await supabase.from('advance_rates').delete().eq('id', id);
+    if (error) { toast.error('Error al eliminar'); return; }
+    loadData();
+  };
+
   const buildPdfData = () => {
     if (!data) return null;
     const tc = effectiveTc;
