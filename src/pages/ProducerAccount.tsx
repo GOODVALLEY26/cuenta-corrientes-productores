@@ -277,6 +277,15 @@ const ProducerAccount = () => {
     loadData();
   };
 
+  const setPaidDate = async (id: string, date: string) => {
+    const payload: any = date
+      ? { paid: true, paid_date: date }
+      : { paid: false, paid_date: null };
+    const { error } = await supabase.from('advance_rates').update(payload).eq('id', id);
+    if (error) { toast.error('Error al guardar fecha'); return; }
+    loadData();
+  };
+
   const buildPdfData = () => {
     if (!data) return null;
     const tc = effectiveTc;
@@ -494,9 +503,18 @@ const ProducerAccount = () => {
                              {a.paid ? 'Pagado' : 'Pendiente'}
                            </Badge>
                          </TableCell>
-                         <TableCell className="text-center text-sm text-muted-foreground">
-                           {a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-'}
-                         </TableCell>
+                          <TableCell className="text-center text-sm text-muted-foreground">
+                            {isSpecial ? (
+                              <Input
+                                type="date"
+                                value={a.paidDate ?? ''}
+                                onChange={(e) => setPaidDate(a.id, e.target.value)}
+                                className="h-8 w-36 mx-auto text-sm"
+                              />
+                            ) : (
+                              a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-'
+                            )}
+                          </TableCell>
                          {isSpecial && (
                            <TableCell className="text-center">
                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteAdvance(a.id)}>
