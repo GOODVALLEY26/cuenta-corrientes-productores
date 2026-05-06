@@ -1,0 +1,1 @@
+ALTER TABLE public.advance_rates ADD COLUMN IF NOT EXISTS net_clp numeric;
