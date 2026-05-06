@@ -310,19 +310,22 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   // 3. PRÓXIMO PAGO + USD POR FACTURAR (left) & DOCUMENTO REQUERIDO (right)
   // ═══════════════════════════════════════════
-  if (data.nextAdvance) {
+  if (data.nextAdvance || data.needsDocument) {
     y = ensureSpace(doc, y, 50, m);
     const pY = y;
-    const nextMonth = MONTHS_FULL[data.nextAdvance.month - 1];
+    const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '-';
 
     // LEFT: Próximo Pago
     let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
-    const payRows: string[][] = [
-      ['Mes', nextMonth],
-      ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
-    ];
-    if (data.nextDiscount > 0) payRows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
-    payRows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
+    const payRows: string[][] = data.nextAdvance ? (() => {
+      const rows: string[][] = [
+        ['Mes', nextMonth],
+        ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
+      ];
+      if (data.nextDiscount > 0) rows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
+      rows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
+      return rows;
+    })() : [['Estado', 'Sin próximo pago pendiente']];
 
     autoTable(doc, {
       startY: lpY,
