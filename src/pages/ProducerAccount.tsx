@@ -9,8 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download } from 'lucide-react';
 import { generateProducerPdf } from '@/lib/generateProducerPdf';
+import { Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const SPECIAL_PRODUCER_NAME = 'Inversiones Casablanca';
 
 type Producer = { id: string; name: string; drying_payment_method: string; rut?: string };
 
@@ -22,6 +25,12 @@ const ProducerAccount = () => {
   const [data, setData] = useState<any>(null);
   const [docTcOverride, setDocTcOverride] = useState<string>('');
   const [docUsdOverride, setDocUsdOverride] = useState<string>('');
+  const [editingTcId, setEditingTcId] = useState<string | null>(null);
+  const [tcEditValue, setTcEditValue] = useState<string>('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
+  const [newAdvCents, setNewAdvCents] = useState<string>('');
+  const [newAdvTc, setNewAdvTc] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +73,15 @@ const ProducerAccount = () => {
 
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
-      return { month: r.month, centsPerKg: r.cents_per_kg, advance, paid: r.paid, paidDate: (r as any).paid_date };
+      return {
+        id: r.id,
+        month: r.month,
+        centsPerKg: r.cents_per_kg,
+        advance,
+        paid: r.paid,
+        paidDate: (r as any).paid_date,
+        exchangeRate: (r as any).exchange_rate ? Number((r as any).exchange_rate) : null,
+      };
     }).sort((a, b) => a.month - b.month);
 
     const totalAdvances = advances.reduce((s, a) => s + a.advance, 0);
