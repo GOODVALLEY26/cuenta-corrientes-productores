@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const SPECIAL_PRODUCER_NAME = 'Inversiones Casablanca';
 
 type Producer = { id: string; name: string };
 type Rate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; paid: boolean; paid_date: string | null };
@@ -59,13 +60,18 @@ const Advances = () => {
         await supabase.from('advance_rates').delete().eq('id', existing.id);
       }
     } else {
-      await supabase.from('advance_rates').upsert({
-        producer_id: pid,
-        month,
-        year: filterYear,
-        cents_per_kg: val,
-        user_id: user!.id,
-      }, { onConflict: 'producer_id,month,year' });
+      const existing = getRate(pid, month);
+      if (existing) {
+        await supabase.from('advance_rates').update({ cents_per_kg: val }).eq('id', existing.id);
+      } else {
+        await supabase.from('advance_rates').insert({
+          producer_id: pid,
+          month,
+          year: filterYear,
+          cents_per_kg: val,
+          user_id: user!.id,
+        });
+      }
     }
     setEditingCell(null);
     load();
@@ -149,7 +155,7 @@ const Advances = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {producers.map(p => (
+              {producers.filter(p => p.name !== SPECIAL_PRODUCER_NAME).map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">{p.name}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{Number(getKg(p.id)).toLocaleString('es-CL')}</TableCell>

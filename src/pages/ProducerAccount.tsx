@@ -7,10 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download } from 'lucide-react';
+import { Download, Plus, Trash2 } from 'lucide-react';
 import { generateProducerPdf } from '@/lib/generateProducerPdf';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const SPECIAL_PRODUCER_NAME = 'Inversiones Casablanca';
 
 type Producer = { id: string; name: string; drying_payment_method: string; rut?: string };
 
@@ -22,6 +26,12 @@ const ProducerAccount = () => {
   const [data, setData] = useState<any>(null);
   const [docTcOverride, setDocTcOverride] = useState<string>('');
   const [docUsdOverride, setDocUsdOverride] = useState<string>('');
+  const [editingTcId, setEditingTcId] = useState<string | null>(null);
+  const [tcEditValue, setTcEditValue] = useState<string>('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
+  const [newAdvCents, setNewAdvCents] = useState<string>('');
+  const [newAdvTc, setNewAdvTc] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +74,15 @@ const ProducerAccount = () => {
 
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
-      return { month: r.month, centsPerKg: r.cents_per_kg, advance, paid: r.paid, paidDate: (r as any).paid_date };
+      return {
+        id: r.id,
+        month: r.month,
+        centsPerKg: r.cents_per_kg,
+        advance,
+        paid: r.paid,
+        paidDate: (r as any).paid_date,
+        exchangeRate: (r as any).exchange_rate ? Number((r as any).exchange_rate) : null,
+      };
     }).sort((a, b) => a.month - b.month);
 
     const totalAdvances = advances.reduce((s, a) => s + a.advance, 0);
@@ -216,6 +234,48 @@ const ProducerAccount = () => {
   const effectiveTc = data ? (docTcOverride !== '' ? Number(docTcOverride) : data.docExRate) : null;
   const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
 
+  const selectedProducer = producers.find(p => p.id === selectedId);
+  const isSpecial = selectedProducer?.name === SPECIAL_PRODUCER_NAME;
+
+  const saveTc = async (advanceId: string) => {
+    const val = tcEditValue === '' ? null : Number(tcEditValue);
+    if (val !== null && isNaN(val)) { toast.error('TC inválido'); return; }
+    const { error } = await supabase
+      .from('advance_rates')
+      .update({ exchange_rate: val } as any)
+      .eq('id', advanceId);
+    if (error) { toast.error('Error al guardar TC'); return; }
+    setEditingTcId(null);
+    setTcEditValue('');
+    loadData();
+  };
+
+  const addAdvance = async () => {
+    const cents = Number(newAdvCents);
+    if (!cents || isNaN(cents)) { toast.error('Ingresa ¢/kg'); return; }
+    const tc = newAdvTc === '' ? null : Number(newAdvTc);
+    const { error } = await supabase.from('advance_rates').insert({
+      producer_id: selectedId,
+      year,
+      month: newAdvMonth,
+      cents_per_kg: cents,
+      user_id: user!.id,
+      exchange_rate: tc,
+    } as any);
+    if (error) { toast.error('Error al agregar anticipo'); return; }
+    setAddOpen(false);
+    setNewAdvCents('');
+    setNewAdvTc('');
+    loadData();
+  };
+
+  const deleteAdvance = async (id: string) => {
+    if (!confirm('¿Eliminar este anticipo?')) return;
+    const { error } = await supabase.from('advance_rates').delete().eq('id', id);
+    if (error) { toast.error('Error al eliminar'); return; }
+    loadData();
+  };
+
   const buildPdfData = () => {
     if (!data) return null;
     const tc = effectiveTc;
@@ -361,8 +421,13 @@ const ProducerAccount = () => {
 
           {/* Anticipos */}
           <Card className="lg:col-span-2">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base">Anticipos {year}</CardTitle>
+              {isSpecial && (
+                <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Agregar
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -373,23 +438,55 @@ const ProducerAccount = () => {
                      <TableHead className="text-right">Anticipo USD</TableHead>
                      <TableHead className="text-right">Desc. Secado</TableHead>
                      <TableHead className="text-right">Neto a Pagar</TableHead>
+                     {isSpecial && <TableHead className="text-right">TC</TableHead>}
+                     {isSpecial && <TableHead className="text-right">Neto CLP</TableHead>}
                      <TableHead className="text-center">Estado</TableHead>
                      <TableHead className="text-center">Fecha Pago</TableHead>
+                     {isSpecial && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.advances.length === 0 ? (
-                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={isSpecial ? 10 : 7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
                    ) : data.advances.map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
                      const net = a.advance - discount;
+                     const netClp = a.exchangeRate ? net * a.exchangeRate : null;
                      return (
-                       <TableRow key={a.month}>
+                       <TableRow key={a.id}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
                          <TableCell className="text-right">{fmtDec(a.centsPerKg / 100)}</TableCell>
                          <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
                          <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         {isSpecial && (
+                           <TableCell className="text-right p-1">
+                             {editingTcId === a.id ? (
+                               <Input
+                                 type="number"
+                                 step="any"
+                                 className="h-8 w-24 text-right ml-auto"
+                                 value={tcEditValue}
+                                 onChange={(e) => setTcEditValue(e.target.value)}
+                                 onBlur={() => saveTc(a.id)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveTc(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
+                                 autoFocus
+                               />
+                             ) : (
+                               <button
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm"
+                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(a.exchangeRate ? String(a.exchangeRate) : ''); }}
+                               >
+                                 {a.exchangeRate ? `$${Number(a.exchangeRate).toLocaleString('es-CL')}` : <span className="text-muted-foreground">—</span>}
+                               </button>
+                             )}
+                           </TableCell>
+                         )}
+                         {isSpecial && (
+                           <TableCell className="text-right font-bold">
+                             {netClp !== null ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground">—</span>}
+                           </TableCell>
+                         )}
                          <TableCell className="text-center">
                            <Badge variant={a.paid ? 'default' : 'outline'} className={a.paid ? 'bg-green-600' : ''}>
                              {a.paid ? 'Pagado' : 'Pendiente'}
@@ -398,6 +495,13 @@ const ProducerAccount = () => {
                          <TableCell className="text-center text-sm text-muted-foreground">
                            {a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-'}
                          </TableCell>
+                         {isSpecial && (
+                           <TableCell className="text-center">
+                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteAdvance(a.id)}>
+                               <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                             </Button>
+                           </TableCell>
+                         )}
                        </TableRow>
                      );
                    })}
@@ -408,10 +512,20 @@ const ProducerAccount = () => {
                        <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
+                       {isSpecial && <TableCell></TableCell>}
+                       {isSpecial && (
+                         <TableCell className="text-right">
+                           CLP {fmtClp(data.advances.reduce((s: number, a: any) => {
+                             const d = data.discountByMonth[a.month] ?? 0;
+                             return s + (a.exchangeRate ? (a.advance - d) * a.exchangeRate : 0);
+                           }, 0))}
+                         </TableCell>
+                       )}
                        <TableCell className="text-center">
                          <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
                        </TableCell>
                        <TableCell></TableCell>
+                       {isSpecial && <TableCell></TableCell>}
                      </TableRow>
                    )}
                 </TableBody>
@@ -655,6 +769,37 @@ const ProducerAccount = () => {
           </Card>
         </div>
       )}
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Agregar anticipo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>Mes</Label>
+              <Select value={String(newAdvMonth)} onValueChange={(v) => setNewAdvMonth(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTHS_FULL.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>¢/kg</Label>
+              <Input type="number" step="any" value={newAdvCents} onChange={(e) => setNewAdvCents(e.target.value)} />
+            </div>
+            <div>
+              <Label>Tipo de cambio (opcional)</Label>
+              <Input type="number" step="any" value={newAdvTc} onChange={(e) => setNewAdvTc(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
+            <Button onClick={addAdvance}>Agregar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
