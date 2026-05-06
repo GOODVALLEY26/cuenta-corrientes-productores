@@ -458,7 +458,15 @@ const ProducerAccount = () => {
                 <TableBody>
                   {data.advances.length === 0 ? (
                      <TableRow><TableCell colSpan={isSpecial ? 10 : 7} className="text-center text-muted-foreground py-6">Sin anticipos configurados</TableCell></TableRow>
-                   ) : data.advances.map((a: any) => {
+                   ) : (isSpecial
+                        ? [...data.advances].sort((a: any, b: any) => {
+                            if (a.paidDate && b.paidDate) return a.paidDate.localeCompare(b.paidDate);
+                            if (a.paidDate) return -1;
+                            if (b.paidDate) return 1;
+                            return a.month - b.month;
+                          })
+                        : data.advances
+                      ).map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
                      const net = a.advance - discount;
                      const netClp = a.netClp;
