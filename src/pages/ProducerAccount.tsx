@@ -74,6 +74,7 @@ const ProducerAccount = () => {
 
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
+      const netClp = (r as any).net_clp ? Number((r as any).net_clp) : null;
       return {
         id: r.id,
         month: r.month,
@@ -81,7 +82,7 @@ const ProducerAccount = () => {
         advance,
         paid: r.paid,
         paidDate: (r as any).paid_date,
-        exchangeRate: (r as any).exchange_rate ? Number((r as any).exchange_rate) : null,
+        netClp,
       };
     }).sort((a, b) => a.month - b.month);
 
