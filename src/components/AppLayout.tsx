@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Users, BarChart3, FileText, DollarSign, Settings, LogOut, Menu, X,
-  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen, CreditCard
+  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen, CreditCard, Download
 } from 'lucide-react';
 
 const navItems = [
@@ -20,6 +20,7 @@ const navItems = [
   { path: '/control-iva', label: 'Control IVA', icon: Percent },
   { path: '/cuenta-corriente', label: 'Cuenta Corriente', icon: BookOpen },
   { path: '/tipo-cambio', label: 'Tipo de Cambio', icon: Settings },
+  { path: '/respaldo', label: 'Respaldo', icon: Download },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

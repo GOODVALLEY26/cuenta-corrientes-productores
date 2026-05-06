@@ -17,6 +17,7 @@ import InstallmentPayments from "@/pages/InstallmentPayments";
 import IvaTracking from "@/pages/IvaTracking";
 import ExchangeRate from "@/pages/ExchangeRate";
 import ProducerAccount from "@/pages/ProducerAccount";
+import Backup from "@/pages/Backup";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const ProtectedRoutes = () => {
         <Route path="/control-iva" element={<IvaTracking />} />
         <Route path="/cuenta-corriente" element={<ProducerAccount />} />
         <Route path="/tipo-cambio" element={<ExchangeRate />} />
+        <Route path="/respaldo" element={<Backup />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
