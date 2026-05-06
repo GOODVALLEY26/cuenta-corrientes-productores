@@ -277,6 +277,15 @@ const ProducerAccount = () => {
     loadData();
   };
 
+  const setPaidDate = async (id: string, date: string) => {
+    const payload: any = date
+      ? { paid: true, paid_date: date }
+      : { paid: false, paid_date: null };
+    const { error } = await supabase.from('advance_rates').update(payload).eq('id', id);
+    if (error) { toast.error('Error al guardar fecha'); return; }
+    loadData();
+  };
+
   const buildPdfData = () => {
     if (!data) return null;
     const tc = effectiveTc;
