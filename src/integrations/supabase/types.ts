@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           cents_per_kg: number
           created_at: string
+          exchange_rate: number | null
           id: string
           month: number
           paid: boolean
@@ -29,6 +30,7 @@ export type Database = {
         Insert: {
           cents_per_kg: number
           created_at?: string
+          exchange_rate?: number | null
           id?: string
           month: number
           paid?: boolean
@@ -40,6 +42,7 @@ export type Database = {
         Update: {
           cents_per_kg?: number
           created_at?: string
+          exchange_rate?: number | null
           id?: string
           month?: number
           paid?: boolean

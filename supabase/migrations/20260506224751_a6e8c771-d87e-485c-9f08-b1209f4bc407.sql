@@ -1,0 +1,1 @@
+ALTER TABLE public.advance_rates ADD COLUMN IF NOT EXISTS exchange_rate numeric;
