@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const SPECIAL_PRODUCER_NAME = 'Inversiones Casablanca';
+const SPECIAL_PRODUCER_MATCH = 'casablanca';
 
 type Producer = { id: string; name: string; drying_payment_method: string; rut?: string };
 
@@ -235,7 +235,7 @@ const ProducerAccount = () => {
   const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
 
   const selectedProducer = producers.find(p => p.id === selectedId);
-  const isSpecial = selectedProducer?.name === SPECIAL_PRODUCER_NAME;
+  const isSpecial = !!selectedProducer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
 
   const saveTc = async (advanceId: string) => {
     const val = tcEditValue === '' ? null : Number(tcEditValue);
