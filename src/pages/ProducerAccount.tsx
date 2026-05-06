@@ -238,14 +238,14 @@ const ProducerAccount = () => {
   const selectedProducer = producers.find(p => p.id === selectedId);
   const isSpecial = !!selectedProducer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
 
-  const saveTc = async (advanceId: string) => {
+  const saveNetClp = async (advanceId: string) => {
     const val = tcEditValue === '' ? null : Number(tcEditValue);
-    if (val !== null && isNaN(val)) { toast.error('TC inválido'); return; }
+    if (val !== null && isNaN(val)) { toast.error('Valor inválido'); return; }
     const { error } = await supabase
       .from('advance_rates')
-      .update({ exchange_rate: val } as any)
+      .update({ net_clp: val } as any)
       .eq('id', advanceId);
-    if (error) { toast.error('Error al guardar TC'); return; }
+    if (error) { toast.error('Error al guardar Neto CLP'); return; }
     setEditingTcId(null);
     setTcEditValue('');
     loadData();
@@ -254,14 +254,14 @@ const ProducerAccount = () => {
   const addAdvance = async () => {
     const cents = Number(newAdvCents);
     if (!cents || isNaN(cents)) { toast.error('Ingresa ¢/kg'); return; }
-    const tc = newAdvTc === '' ? null : Number(newAdvTc);
+    const netClp = newAdvTc === '' ? null : Number(newAdvTc);
     const { error } = await supabase.from('advance_rates').insert({
       producer_id: selectedId,
       year,
       month: newAdvMonth,
       cents_per_kg: cents,
       user_id: user!.id,
-      exchange_rate: tc,
+      net_clp: netClp,
     } as any);
     if (error) { toast.error('Error al agregar anticipo'); return; }
     setAddOpen(false);
