@@ -495,8 +495,9 @@ const ProducerAccount = () => {
                    const glosa = data.docType === 'Nota de Débito'
                      ? `Ajuste de precio de anticipo ${nextMonth}`
                      : `Anticipo compra fruta temporada ${data.year}`;
-                   const tc = data.docExRate;
-                   const montoCLP = tc ? data.docNeededUsd * tc : 0;
+                   const tc = effectiveTc;
+                   const usd = effectiveDocUsd;
+                   const montoCLP = tc ? usd * tc : 0;
                    const iva = montoCLP * 0.19;
                    return (
                    <Table>
@@ -513,18 +514,35 @@ const ProducerAccount = () => {
                        </TableRow>
                        <TableRow>
                          <TableCell className="font-medium">Fecha Documento</TableCell>
-                         <TableCell className="text-right">{nextMonth} {data.year}</TableCell>
+                         <TableCell className="text-right">{nextMonth || '-'} {data.year}</TableCell>
                        </TableRow>
                        <TableRow>
                          <TableCell className="font-medium">Monto Neto USD</TableCell>
-                         <TableCell className="text-right font-bold">USD {fmt(data.docNeededUsd)}</TableCell>
+                         <TableCell className="text-right">
+                           <Input
+                             type="number"
+                             step="any"
+                             className="h-8 w-32 text-right ml-auto font-bold"
+                             value={docUsdOverride !== '' ? docUsdOverride : data.docNeededUsd}
+                             onChange={(e) => setDocUsdOverride(e.target.value)}
+                           />
+                         </TableCell>
                        </TableRow>
-                       {tc ? (
                          <>
                            <TableRow>
                              <TableCell className="font-medium">Tipo de Cambio</TableCell>
-                             <TableCell className="text-right">${Number(tc).toLocaleString('es-CL')}</TableCell>
+                             <TableCell className="text-right">
+                               <Input
+                                 type="number"
+                                 step="any"
+                                 className="h-8 w-32 text-right ml-auto"
+                                 placeholder="TC"
+                                 value={docTcOverride !== '' ? docTcOverride : (tc ?? '')}
+                                 onChange={(e) => setDocTcOverride(e.target.value)}
+                               />
+                             </TableCell>
                            </TableRow>
+                         {tc ? (<>
                            <TableRow>
                              <TableCell className="font-medium">Monto Neto CLP</TableCell>
                              <TableCell className="text-right">CLP {fmtClp(Math.round(montoCLP))}</TableCell>
@@ -537,14 +555,14 @@ const ProducerAccount = () => {
                              <TableCell className="font-bold">Total Documento</TableCell>
                              <TableCell className="text-right font-bold">CLP {fmtClp(Math.round(montoCLP + iva))}</TableCell>
                            </TableRow>
-                         </>
-                       ) : (
+                         </>) : (
                          <TableRow>
                            <TableCell className="font-medium text-muted-foreground" colSpan={2}>
-                             Sin tipo de cambio disponible.
+                             Ingresa un tipo de cambio para calcular CLP e IVA.
                            </TableCell>
                          </TableRow>
                        )}
+                       </>
                      </TableBody>
                    </Table>
                    );
