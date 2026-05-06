@@ -457,7 +457,7 @@ const ProducerAccount = () => {
                 </CardContent>
               </Card>
 
-              {data.needsDocument && data.nextAdvance && (
+              {data.needsDocument && (
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">USD por Facturar</CardTitle>
