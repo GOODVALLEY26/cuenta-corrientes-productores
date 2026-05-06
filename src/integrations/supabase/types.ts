@@ -21,6 +21,7 @@ export type Database = {
           exchange_rate: number | null
           id: string
           month: number
+          net_clp: number | null
           paid: boolean
           paid_date: string | null
           producer_id: string
@@ -33,6 +34,7 @@ export type Database = {
           exchange_rate?: number | null
           id?: string
           month: number
+          net_clp?: number | null
           paid?: boolean
           paid_date?: string | null
           producer_id: string
@@ -45,6 +47,7 @@ export type Database = {
           exchange_rate?: number | null
           id?: string
           month?: number
+          net_clp?: number | null
           paid?: boolean
           paid_date?: string | null
           producer_id?: string
