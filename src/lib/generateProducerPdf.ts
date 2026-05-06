@@ -13,7 +13,7 @@ interface PdfData {
   dryKg: number;
   totalInvoicedUsd: number;
   totalInvoicedClp: number;
-  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null }[];
+  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null; netClp?: number | null }[];
   totalAdvances: number;
   paidAdvances: number;
   nextAdvance: { month: number; centsPerKg: number; advance: number } | null;
@@ -42,6 +42,7 @@ interface PdfData {
   cuotaClpByMonth?: Record<number, number>;
   cuotaUsdByMonth?: Record<number, number>;
   prodInvoices?: any[];
+  isSpecial?: boolean;
 }
 
 const methodLabel: Record<string, string> = {
