@@ -295,6 +295,7 @@ const ProducerAccount = () => {
       docExRate: tc,
       docNeededUsd: usd,
       needsDocument: usd > 0,
+      isSpecial,
     };
   };
 
