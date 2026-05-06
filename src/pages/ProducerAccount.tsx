@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Download } from 'lucide-react';
 import { generateProducerPdf } from '@/lib/generateProducerPdf';
 
@@ -19,6 +20,8 @@ const ProducerAccount = () => {
   const [selectedId, setSelectedId] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [data, setData] = useState<any>(null);
+  const [docTcOverride, setDocTcOverride] = useState<string>('');
+  const [docUsdOverride, setDocUsdOverride] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
@@ -38,7 +41,7 @@ const ProducerAccount = () => {
       supabase.from('dry_kg_reports').select('dry_kg').eq('producer_id', selectedId),
       supabase.from('producer_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('drying_invoices').select('*').eq('producer_id', selectedId),
-      supabase.from('exchange_rates').select('*').eq('year', year),
+      supabase.from('exchange_rates').select('*').eq('year', year).order('created_at', { ascending: false }),
       supabase.from('installment_payments').select('*').eq('producer_id', selectedId).eq('year', year).order('installment_number'),
     ]);
 
@@ -82,7 +85,12 @@ const ProducerAccount = () => {
 
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
     const fallbackExRate = lastProdInvoice ? Number(lastProdInvoice.exchange_rate) : null;
-    const nextMonthEx = exRates.find(e => e.month === (advances.find(a => !a.paid)?.month ?? 0));
+    const targetMonth = advances.find(a => !a.paid)?.month
+      ?? [...advances].sort((a, b) => b.month - a.month)[0]?.month
+      ?? 0;
+    // exRates already ordered by created_at desc → find returns latest registered
+    const nextMonthEx = exRates.find(e => e.month === targetMonth)
+      ?? exRates[0]; // fallback: latest TC of any month in year
     const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
 
     const discountByMonth: Record<number, number> = {};
@@ -146,7 +154,6 @@ const ProducerAccount = () => {
     const nextPaymentNet = nextPaymentGross - nextDiscount;
 
     const alreadyInvoiced = totalInvoicedUsd;
-    const needsDocument = nextPaymentGross > 0 && alreadyInvoiced < totalAdvances;
     const hasInitialInvoice = prodInvoices.some(i => i.document_type === 'factura');
     const docType = hasInitialInvoice ? 'Nota de Débito' : 'Factura';
 
@@ -198,11 +205,28 @@ const ProducerAccount = () => {
       cuotaUsdByMonth,
       prodInvoices,
     });
+    setDocTcOverride('');
+    setDocUsdOverride('');
   };
 
   const fmt = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('en-US');
   const fmtDec = (n: number | undefined | null, decimals = 2) => (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   const fmtClp = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('es-CL');
+
+  const effectiveTc = data ? (docTcOverride !== '' ? Number(docTcOverride) : data.docExRate) : null;
+  const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
+
+  const buildPdfData = () => {
+    if (!data) return null;
+    const tc = effectiveTc;
+    const usd = effectiveDocUsd;
+    return {
+      ...data,
+      docExRate: tc,
+      docNeededUsd: usd,
+      needsDocument: usd > 0,
+    };
+  };
 
   const methodLabel: Record<string, string> = {
     descuento_usd: 'Descuento en USD',
@@ -220,7 +244,7 @@ const ProducerAccount = () => {
         </div>
         <div className="flex gap-2">
           {data && (
-            <Button variant="outline" onClick={async () => await generateProducerPdf(data)}>
+            <Button variant="outline" onClick={async () => await generateProducerPdf(buildPdfData())}>
               <Download className="h-4 w-4 mr-1" /> Descargar PDF
             </Button>
           )}
