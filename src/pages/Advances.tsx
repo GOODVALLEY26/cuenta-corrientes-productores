@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const SPECIAL_PRODUCER_NAME = 'Inversiones Casablanca';
+const SPECIAL_PRODUCER_MATCH = 'casablanca';
 
 type Producer = { id: string; name: string };
 type Rate = { id: string; producer_id: string; month: number; year: number; cents_per_kg: number; paid: boolean; paid_date: string | null };
@@ -155,7 +155,7 @@ const Advances = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {producers.filter(p => p.name !== SPECIAL_PRODUCER_NAME).map(p => (
+              {producers.filter(p => !p.name.toLowerCase().includes(SPECIAL_PRODUCER_MATCH)).map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium">{p.name}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{Number(getKg(p.id)).toLocaleString('es-CL')}</TableCell>
