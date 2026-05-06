@@ -439,8 +439,8 @@ const ProducerAccount = () => {
                      <TableHead className="text-right">Anticipo USD</TableHead>
                      <TableHead className="text-right">Desc. Secado</TableHead>
                      <TableHead className="text-right">Neto a Pagar</TableHead>
-                     {isSpecial && <TableHead className="text-right">TC</TableHead>}
                      {isSpecial && <TableHead className="text-right">Neto CLP</TableHead>}
+                     {isSpecial && <TableHead className="text-right">TC</TableHead>}
                      <TableHead className="text-center">Estado</TableHead>
                      <TableHead className="text-center">Fecha Pago</TableHead>
                      {isSpecial && <TableHead></TableHead>}
@@ -452,7 +452,8 @@ const ProducerAccount = () => {
                    ) : data.advances.map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
                      const net = a.advance - discount;
-                     const netClp = a.exchangeRate ? net * a.exchangeRate : null;
+                     const netClp = a.netClp;
+                     const tc = netClp && net > 0 ? netClp / net : null;
                      return (
                        <TableRow key={a.id}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
@@ -466,26 +467,26 @@ const ProducerAccount = () => {
                                <Input
                                  type="number"
                                  step="any"
-                                 className="h-8 w-24 text-right ml-auto"
+                                 className="h-8 w-28 text-right ml-auto"
                                  value={tcEditValue}
                                  onChange={(e) => setTcEditValue(e.target.value)}
-                                 onBlur={() => saveTc(a.id)}
-                                 onKeyDown={(e) => { if (e.key === 'Enter') saveTc(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
+                                 onBlur={() => saveNetClp(a.id)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveNetClp(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
                                  autoFocus
                                />
                              ) : (
                                <button
-                                 className="hover:bg-accent rounded px-2 py-1 text-sm"
-                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(a.exchangeRate ? String(a.exchangeRate) : ''); }}
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm font-bold"
+                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(netClp ? String(netClp) : ''); }}
                                >
-                                 {a.exchangeRate ? `$${Number(a.exchangeRate).toLocaleString('es-CL')}` : <span className="text-muted-foreground">—</span>}
+                                 {netClp ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground font-normal">—</span>}
                                </button>
                              )}
                            </TableCell>
                          )}
                          {isSpecial && (
-                           <TableCell className="text-right font-bold">
-                             {netClp !== null ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground">—</span>}
+                           <TableCell className="text-right text-sm text-muted-foreground">
+                             {tc ? `$${tc.toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '—'}
                            </TableCell>
                          )}
                          <TableCell className="text-center">
