@@ -298,20 +298,25 @@ export async function generateProducerPdf(data: PdfData) {
     styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
     head: [advHeaders],
     body: advRows,
-    columnStyles: {
-      0: { fontStyle: 'bold' },
-      1: { halign: 'right' },
-      2: { halign: 'right' },
-      ...(showDiscount ? {
-        3: { halign: 'right', textColor: [...ACCENT_RED] },
-        4: { halign: 'right', fontStyle: 'bold' },
-        5: { halign: 'center' },
-        6: { halign: 'center' },
-      } : {
-        3: { halign: 'center' },
-        4: { halign: 'center' },
-      }),
-    },
+    columnStyles: (() => {
+      const cs: any = {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'right' },
+        2: { halign: 'right' },
+      };
+      let i = 3;
+      if (showDiscount) {
+        cs[i++] = { halign: 'right', textColor: [...ACCENT_RED] };
+        cs[i++] = { halign: 'right', fontStyle: 'bold' };
+      }
+      if (showSpecialCols) {
+        cs[i++] = { halign: 'right' };
+        cs[i++] = { halign: 'right' };
+      }
+      cs[i++] = { halign: 'center' };
+      cs[i++] = { halign: 'center' };
+      return cs;
+    })(),
     didParseCell: (h) => {
       if (h.section === 'body') {
         if (h.row.index === advRows.length - 1) {
