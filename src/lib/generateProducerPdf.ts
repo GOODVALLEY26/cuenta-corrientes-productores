@@ -294,8 +294,8 @@ export async function generateProducerPdf(data: PdfData) {
     margin: { left: m + 1, right: m + 1 },
     tableWidth: cw - 2,
     theme: 'grid',
-    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
-    styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
+    headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: showSpecialCols ? 6.5 : 8, halign: 'center', textColor: [255, 255, 255], cellPadding: showSpecialCols ? 1.8 : 2.5 },
+    styles: { fontSize: showSpecialCols ? 6.5 : 8, cellPadding: showSpecialCols ? 1.8 : 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
     head: [advHeaders],
     body: advRows,
     columnStyles: (() => {
