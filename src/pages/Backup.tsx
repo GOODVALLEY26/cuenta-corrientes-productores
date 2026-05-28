@@ -15,6 +15,7 @@ const TABLES = [
   'installment_payments',
   'producer_invoices',
   'payment_flows',
+  'iva_payments',
 ] as const;
 
 const Backup = () => {

@@ -46,13 +46,14 @@ const ProducerAccount = () => {
   }, [selectedId, year, user]);
 
   const loadData = async () => {
-    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes] = await Promise.all([
+    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes, ivaPayRes] = await Promise.all([
       supabase.from('advance_rates').select('*').eq('producer_id', selectedId).eq('year', year),
       supabase.from('dry_kg_reports').select('dry_kg').eq('producer_id', selectedId),
       supabase.from('producer_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('drying_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('exchange_rates').select('*').eq('year', year).order('created_at', { ascending: false }),
       supabase.from('installment_payments').select('*').eq('producer_id', selectedId).eq('year', year).order('installment_number'),
+      supabase.from('iva_payments').select('*').eq('producer_id', selectedId).order('payment_date', { ascending: false }),
     ]);
 
     const rates = ratesRes.data ?? [];
@@ -61,6 +62,7 @@ const ProducerAccount = () => {
     const dryInvoices = dryInvRes.data ?? [];
     const exRates = exRatesRes.data ?? [];
     const installmentPayments = instPayRes.data ?? [];
+    const ivaPaymentsList = ivaPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
     const totalInvoicedUsd = prodInvoices.reduce((s, i) => {
@@ -187,6 +189,7 @@ const ProducerAccount = () => {
     const ivaDocRequerido = docNeededUsd > 0 ? docMontoCLP * 0.19 : 0;
     const ivaProductor = ivaFacturado + ivaDocRequerido;
     const ivaSaldo = ivaSecado - ivaProductor;
+    const ivaPagado = ivaPaymentsList.reduce((s: number, p: any) => s + Number(p.amount_clp ?? 0), 0);
 
     setData({
       year,
@@ -212,6 +215,8 @@ const ProducerAccount = () => {
       ivaSaldo,
       ivaSecado,
       ivaProductor,
+      ivaPagado,
+      ivaPayments: ivaPaymentsList,
       producer,
       cuotaClp,
       cuotaTotalPaidClp,
@@ -724,9 +729,13 @@ const ProducerAccount = () => {
                {(() => {
                  const ivaAFavor = data.ivaProductor;
                  const ivaEnContra = data.ivaSecado;
-                 const saldo = ivaAFavor - ivaEnContra;
+                 const ivaPagado = data.ivaPagado ?? 0;
+                 // saldo bruto: positivo = a favor productor, negativo = a favor exportadora
+                 const saldoBruto = ivaAFavor - ivaEnContra;
+                 // los pagos hechos al productor reducen lo que se le debe (o aumentan la deuda del productor)
+                 const saldo = saldoBruto - ivaPagado;
                  return (
-                 <div className="grid grid-cols-3 gap-4 text-center">
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                    <div>
                      <p className="text-sm text-muted-foreground">IVA Facturado (a su favor)</p>
                      <p className="text-lg font-bold">CLP {fmtClp(ivaAFavor)}</p>
@@ -734,6 +743,10 @@ const ProducerAccount = () => {
                    <div>
                      <p className="text-sm text-muted-foreground">IVA Secado (a favor exportadora)</p>
                      <p className="text-lg font-bold">CLP {fmtClp(ivaEnContra)}</p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground">IVA Pagado al productor</p>
+                     <p className="text-lg font-bold text-blue-600">CLP {fmtClp(ivaPagado)}</p>
                    </div>
                    <div>
                      <p className="text-sm text-muted-foreground">Saldo IVA Neto</p>
@@ -746,6 +759,29 @@ const ProducerAccount = () => {
                  </div>
                  );
                })()}
+               {data.ivaPayments && data.ivaPayments.length > 0 && (
+                 <div className="mt-4 border-t pt-3">
+                   <p className="text-sm font-medium mb-2">Historial de pagos de IVA</p>
+                   <Table>
+                     <TableHeader>
+                       <TableRow>
+                         <TableHead>Fecha</TableHead>
+                         <TableHead className="text-right">Monto CLP</TableHead>
+                         <TableHead>Notas</TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {data.ivaPayments.map((p: any) => (
+                         <TableRow key={p.id}>
+                           <TableCell>{p.payment_date}</TableCell>
+                           <TableCell className="text-right">CLP {fmtClp(Number(p.amount_clp))}</TableCell>
+                           <TableCell className="text-muted-foreground">{p.notes ?? '—'}</TableCell>
+                         </TableRow>
+                       ))}
+                     </TableBody>
+                   </Table>
+                 </div>
+               )}
              </CardContent>
            </Card>
 
