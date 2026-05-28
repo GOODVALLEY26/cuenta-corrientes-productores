@@ -99,9 +99,8 @@ const ProducerAccount = () => {
     const numInstallments = advances.length + 1;
     const cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
 
-    const cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
-    const cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
-    const cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
+    let cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+    let cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
     const cuotaDetails = installmentPayments;
 
     const lastProdInvoice = [...prodInvoices].sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -169,6 +168,25 @@ const ProducerAccount = () => {
         discountByMonth[adv.month] = discountTotal;
       }
     }
+
+    // For descuento_usd flow (no installment_payments table entries), the drying gets
+    // paid implicitly when an advance is marked as paid. Add those discounts here.
+    if (method === 'descuento_usd' && !hasCuotasUsd) {
+      const rateMap = new Map(rates.map((r: any) => [r.month, r]));
+      for (const a of advances) {
+        if (!a.paid) continue;
+        const discUsd = discountByMonth[a.month] ?? 0;
+        if (discUsd <= 0) continue;
+        const r: any = rateMap.get(a.month);
+        const tc = r?.exchange_rate
+          ? Number(r.exchange_rate)
+          : (exRates.find(e => e.month === a.month)?.rate ?? null);
+        cuotaTotalPaidUsd += discUsd;
+        if (tc) cuotaTotalPaidClp += discUsd * Number(tc);
+      }
+    }
+
+    const cuotaSaldoClp = totalDryingClp - cuotaTotalPaidClp;
 
     const nextPaymentGross = nextAdvance?.advance ?? 0;
     const nextDiscount = nextAdvance ? (discountByMonth[nextAdvance.month] ?? 0) : 0;
