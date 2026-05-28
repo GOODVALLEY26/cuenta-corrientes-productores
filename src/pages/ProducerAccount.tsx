@@ -301,6 +301,8 @@ const ProducerAccount = () => {
       docNeededUsd: usd,
       needsDocument: usd > 0,
       isSpecial,
+      ivaPagado: data.ivaPagado,
+      ivaPayments: data.ivaPayments,
     };
   };
 
