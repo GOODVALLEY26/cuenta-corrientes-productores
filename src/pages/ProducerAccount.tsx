@@ -46,13 +46,14 @@ const ProducerAccount = () => {
   }, [selectedId, year, user]);
 
   const loadData = async () => {
-    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes] = await Promise.all([
+    const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes, ivaPayRes] = await Promise.all([
       supabase.from('advance_rates').select('*').eq('producer_id', selectedId).eq('year', year),
       supabase.from('dry_kg_reports').select('dry_kg').eq('producer_id', selectedId),
       supabase.from('producer_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('drying_invoices').select('*').eq('producer_id', selectedId),
       supabase.from('exchange_rates').select('*').eq('year', year).order('created_at', { ascending: false }),
       supabase.from('installment_payments').select('*').eq('producer_id', selectedId).eq('year', year).order('installment_number'),
+      supabase.from('iva_payments').select('*').eq('producer_id', selectedId).order('payment_date', { ascending: false }),
     ]);
 
     const rates = ratesRes.data ?? [];
@@ -61,6 +62,7 @@ const ProducerAccount = () => {
     const dryInvoices = dryInvRes.data ?? [];
     const exRates = exRatesRes.data ?? [];
     const installmentPayments = instPayRes.data ?? [];
+    const ivaPaymentsList = ivaPayRes.data ?? [];
     const producer = producers.find(p => p.id === selectedId)!;
 
     const totalInvoicedUsd = prodInvoices.reduce((s, i) => {
@@ -187,6 +189,7 @@ const ProducerAccount = () => {
     const ivaDocRequerido = docNeededUsd > 0 ? docMontoCLP * 0.19 : 0;
     const ivaProductor = ivaFacturado + ivaDocRequerido;
     const ivaSaldo = ivaSecado - ivaProductor;
+    const ivaPagado = ivaPaymentsList.reduce((s: number, p: any) => s + Number(p.amount_clp ?? 0), 0);
 
     setData({
       year,
@@ -212,6 +215,8 @@ const ProducerAccount = () => {
       ivaSaldo,
       ivaSecado,
       ivaProductor,
+      ivaPagado,
+      ivaPayments: ivaPaymentsList,
       producer,
       cuotaClp,
       cuotaTotalPaidClp,
