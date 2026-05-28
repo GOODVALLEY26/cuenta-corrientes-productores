@@ -32,6 +32,8 @@ interface PdfData {
   ivaSecado: number;
   ivaProductor: number;
   ivaSaldo: number;
+  ivaPagado?: number;
+  ivaPayments?: Array<{ payment_date: string; amount_clp: number; notes?: string | null }>;
   cuotaClp?: number;
   cuotaTotalPaidClp?: number;
   cuotaTotalPaidUsd?: number;
@@ -477,9 +479,10 @@ export async function generateProducerPdf(data: PdfData) {
 
   const ivaAFavor = data.ivaProductor;
   const ivaEnContra = data.ivaSecado;
-  const saldoP = ivaAFavor - ivaEnContra;
+  const ivaPagado = data.ivaPagado ?? 0;
+  const saldoP = ivaAFavor - ivaEnContra - ivaPagado;
 
-  const colW = (cw - 18) / 3;
+  const colW = (cw - 24) / 4;
   const colGap = 3;
   const bY = iY + 12;
   const bH = 22;
@@ -487,6 +490,7 @@ export async function generateProducerPdf(data: PdfData) {
   const boxes = [
     { label: 'IVA Facturado (a su favor)', value: `CLP ${fmtClp(ivaAFavor)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
     { label: 'IVA Secado (a favor exportadora)', value: `CLP ${fmtClp(ivaEnContra)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
+    { label: 'IVA Pagado al productor', value: `CLP ${fmtClp(ivaPagado)}`, bg: MUTED_BG, color: [37, 99, 235] as [number, number, number] },
     { label: 'Saldo IVA Neto', value: `CLP ${fmtClp(saldoP)}`, bg: (saldoP >= 0 ? [230, 245, 230] : [255, 235, 235]) as [number, number, number], color: saldoP >= 0 ? ACCENT_GREEN : ACCENT_RED },
   ];
 
@@ -498,7 +502,7 @@ export async function generateProducerPdf(data: PdfData) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
     doc.text(b.label, bx + colW / 2, bY + bH * 0.3, { align: 'center' });
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...b.color);
     doc.text(b.value, bx + colW / 2, bY + bH * 0.7, { align: 'center' });
@@ -507,6 +511,35 @@ export async function generateProducerPdf(data: PdfData) {
   doc.setTextColor(0, 0, 0);
   cardBorder(doc, m, iY, cw, bY + bH - iY + 3);
   y = bY + bH + 3 + sp;
+
+  // Historial de pagos de IVA
+  const ivaPays = data.ivaPayments ?? [];
+  if (ivaPays.length > 0) {
+    y = ensureSpace(doc, y, 30, m);
+    const ipY = y;
+    sectionTitle(doc, m, ipY, cw, 'Historial de Pagos de IVA');
+    const ipRows = [...ivaPays]
+      .sort((a, b) => a.payment_date.localeCompare(b.payment_date))
+      .map(p => [
+        new Date(p.payment_date + 'T12:00:00').toLocaleDateString('es-CL'),
+        `CLP ${fmtClp(Number(p.amount_clp))}`,
+        p.notes ?? '-',
+      ]);
+    autoTable(doc, {
+      startY: ipY + 12,
+      head: [['Fecha', 'Monto CLP', 'Notas']],
+      body: ipRows,
+      margin: { left: m + 3, right: m + 3 },
+      tableWidth: cw - 6,
+      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 1: { halign: 'right' } },
+      theme: 'grid',
+    });
+    const endY = (doc as any).lastAutoTable.finalY;
+    cardBorder(doc, m, ipY, cw, endY - ipY + 3);
+    y = endY + 3 + sp;
+  }
 
   // ═══════════════════════════════════════════
   // 5. HISTORIAL DE FACTURAS DEL PRODUCTOR
