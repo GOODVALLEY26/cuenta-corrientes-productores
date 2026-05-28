@@ -96,8 +96,24 @@ const ProducerAccount = () => {
     const totalDryingClp = dryInvoices.reduce((s, i) => s + Number(i.amount_clp), 0);
 
     const method = producer.drying_payment_method;
-    const numInstallments = advances.length + 1;
-    const cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
+    // For "pago_clp" producers, the real installments live in installment_payments.
+    // Use the next pending installment as the "Cuota a depositar"; fall back to
+    // dividing by (advances + 1) only if no installment entries exist yet.
+    const sortedInstallments = [...installmentPayments].sort((a: any, b: any) => {
+      const ma = a.month ?? 0, mb = b.month ?? 0;
+      if (ma !== mb) return ma - mb;
+      return (a.installment_number ?? 0) - (b.installment_number ?? 0);
+    });
+    const nextPendingInstallment = sortedInstallments.find((p: any) => !p.paid);
+    let cuotaClp = 0;
+    if (installmentPayments.length > 0) {
+      cuotaClp = nextPendingInstallment
+        ? Number(nextPendingInstallment.amount_clp)
+        : Number(sortedInstallments[sortedInstallments.length - 1].amount_clp);
+    } else {
+      const numInstallments = advances.length + 1;
+      cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
+    }
 
     let cuotaTotalPaidClp = installmentPayments.filter((p: any) => p.paid).reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
     let cuotaTotalPaidUsd = installmentPayments.filter((p: any) => p.paid && p.amount_usd).reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
