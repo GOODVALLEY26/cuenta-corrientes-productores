@@ -32,6 +32,8 @@ interface PdfData {
   ivaSecado: number;
   ivaProductor: number;
   ivaSaldo: number;
+  ivaPagado?: number;
+  ivaPayments?: Array<{ payment_date: string; amount_clp: number; notes?: string | null }>;
   cuotaClp?: number;
   cuotaTotalPaidClp?: number;
   cuotaTotalPaidUsd?: number;
