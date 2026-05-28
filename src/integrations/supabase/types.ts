@@ -302,6 +302,39 @@ export type Database = {
           },
         ]
       }
+      iva_payments: {
+        Row: {
+          amount_clp: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string
+          producer_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_clp?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date: string
+          producer_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_clp?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          producer_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_flows: {
         Row: {
           advance_usd: number | null
