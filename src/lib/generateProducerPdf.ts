@@ -451,6 +451,21 @@ export async function generateProducerPdf(data: PdfData) {
           }
         },
       });
+      // Datos de facturación
+      const billY = (doc as any).lastAutoTable.finalY + 2;
+      autoTable(doc, {
+        startY: billY,
+        margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
+        tableWidth: halfW - 4,
+        theme: 'plain',
+        styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'linebreak' },
+        body: [
+          ['Facturar a', 'Exportadora Goodvalley SpA'],
+          ['RUT', '78.328.166-K'],
+          ['Giro', 'Compra, venta, importación y exportación de productos agrícolas'],
+        ],
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'left' } },
+      });
     } else {
       autoTable(doc, {
         startY: rpY,
