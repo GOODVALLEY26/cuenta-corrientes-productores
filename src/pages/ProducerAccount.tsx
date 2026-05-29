@@ -756,6 +756,16 @@ const ProducerAccount = () => {
                  })() : (
                    <p className="text-center py-4 text-green-600 font-medium">Facturación al día ✓</p>
                  )}
+                {data.needsDocument && (
+                  <div className="mt-4 p-3 rounded-md border bg-muted/30 text-sm">
+                    <p className="font-semibold mb-2">Facturar a:</p>
+                    <div className="space-y-1">
+                      <p><span className="font-medium">Razón social:</span> Exportadora Goodvalley SpA</p>
+                      <p><span className="font-medium">RUT:</span> 78.328.166-K</p>
+                      <p><span className="font-medium">Giro:</span> Compra, venta, importación y exportación de productos agrícolas</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
