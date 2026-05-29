@@ -150,6 +150,22 @@ const InstallmentPayments = () => {
   const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtClp = (n: number | null | undefined) => Math.round(n ?? 0).toLocaleString('es-CL');
 
+  const updateExchangeRate = async (inst: any, rateStr: string) => {
+    const rate = Number(rateStr);
+    if (!rate || rate <= 0) {
+      toast.error('Tipo de cambio inválido');
+      return;
+    }
+    if (Number(inst.exchange_rate) === rate) return;
+    const amountUsd = Number(inst.amount_clp) / rate;
+    const { error } = await supabase.from('installment_payments')
+      .update({ exchange_rate: rate, amount_usd: amountUsd } as any)
+      .eq('id', inst.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success('TC actualizado');
+    loadData();
+  };
+
   // Group by producer
   const producersWithInvoices = producers
     .map(producer => {
@@ -246,7 +262,17 @@ const InstallmentPayments = () => {
                             <TableCell className="font-medium">{inst.installment_number}/{invInsts.length}</TableCell>
                             <TableCell>{inst.month && inst.month <= 12 ? MONTHS[inst.month - 1] : `Mes ${inst.month}`}</TableCell>
                             <TableCell className="text-right">CLP {fmtClp(Number(inst.amount_clp))}</TableCell>
-                            <TableCell className="text-right">{inst.exchange_rate ? `$${Number(inst.exchange_rate).toLocaleString('es-CL')}` : '-'}</TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                defaultValue={inst.exchange_rate ?? ''}
+                                onBlur={e => updateExchangeRate(inst, e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                className="h-8 w-28 text-right ml-auto"
+                                placeholder="TC"
+                              />
+                            </TableCell>
                             <TableCell className="text-right">{inst.amount_usd ? `USD ${fmt(Number(inst.amount_usd))}` : '-'}</TableCell>
                             <TableCell className="text-center">
                               <Badge variant={inst.paid ? 'default' : 'outline'} className={inst.paid ? 'bg-green-600' : ''}>
