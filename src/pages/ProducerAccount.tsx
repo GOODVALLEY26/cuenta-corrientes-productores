@@ -130,13 +130,17 @@ const ProducerAccount = () => {
     const docExRate = nextMonthEx ? Number(nextMonthEx.rate) : fallbackExRate;
 
     const discountByMonth: Record<number, number> = {};
-    const hasCuotasUsd = dryInvoices.some(inv => inv.installment_currency === 'usd');
+    // Use per-installment computation whenever installment_payments entries exist
+    // (regardless of installment_currency). This covers both USD cuotas and CLP cuotas
+    // entered manually for descuento_usd producers.
+    const hasInstallmentEntries = installmentPayments.length > 0;
+    const hasCuotasUsd = hasInstallmentEntries;
 
     const cuotaTcByMonth: Record<number, number | null> = {};
     const cuotaClpByMonth: Record<number, number> = {};
     const cuotaUsdByMonth: Record<number, number> = {};
 
-    if (hasCuotasUsd) {
+    if (hasInstallmentEntries) {
       for (const adv of advances) {
         const monthInsts = installmentPayments.filter((p: any) => p.month === adv.month);
         if (monthInsts.length === 0) {
