@@ -13,10 +13,10 @@ interface PdfData {
   dryKg: number;
   totalInvoicedUsd: number;
   totalInvoicedClp: number;
-  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null; netClp?: number | null }[];
+  advances: { month: number; centsPerKg: number; advance: number; paid: boolean; paidDate?: string | null; netClp?: number | null; exchangeRate?: number | null }[];
   totalAdvances: number;
   paidAdvances: number;
-  nextAdvance: { month: number; centsPerKg: number; advance: number } | null;
+  nextAdvance: { month: number; centsPerKg: number; advance: number; netClp?: number | null; exchangeRate?: number | null } | null;
   totalDryingUsd: number;
   totalDryingClp: number;
   discountByMonth: Record<number, number>;
