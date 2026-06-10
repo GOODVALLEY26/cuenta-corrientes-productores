@@ -36,6 +36,8 @@ const ProducerAccount = () => {
   const [newAdvCents, setNewAdvCents] = useState<string>('');
   const [newAdvTc, setNewAdvTc] = useState<string>('');
 
+  const overrideKey = (kind: string) => `producerAccount:${selectedId}:${year}:${kind}`;
+
   useEffect(() => {
     if (!user) return;
     supabase.from('producers').select('id, name, drying_payment_method, rut').order('name').then(({ data }) => {
@@ -47,6 +49,24 @@ const ProducerAccount = () => {
     if (!selectedId || !user) { setData(null); return; }
     loadData();
   }, [selectedId, year, user]);
+
+  // Restore manual overrides for the selected producer/year from localStorage
+  useEffect(() => {
+    if (!selectedId) return;
+    try {
+      setDocTcOverride(localStorage.getItem(overrideKey('docTc')) ?? '');
+      setDocUsdOverride(localStorage.getItem(overrideKey('docUsd')) ?? '');
+      setDocDateOverride(localStorage.getItem(overrideKey('docDate')) ?? '');
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, year]);
+
+  const persistOverride = (kind: string, value: string) => {
+    try {
+      if (value === '') localStorage.removeItem(overrideKey(kind));
+      else localStorage.setItem(overrideKey(kind), value);
+    } catch {}
+  };
 
   const loadData = async () => {
     const [ratesRes, kgRes, prodInvRes, dryInvRes, exRatesRes, instPayRes, ivaPayRes] = await Promise.all([
@@ -283,9 +303,7 @@ const ProducerAccount = () => {
       cuotaUsdByMonth,
       prodInvoices,
     });
-    setDocTcOverride('');
-    setDocUsdOverride('');
-    setDocDateOverride('');
+    // overrides are persisted in localStorage; do not reset here
   };
 
   const fmt = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('en-US');
