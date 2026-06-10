@@ -578,7 +578,7 @@ const ProducerAccount = () => {
                           })
                         : data.advances
                       ).map((a: any) => {
-                     const discount = data.discountByMonth[a.month] ?? 0;
+                     const discount = effectiveDiscountByMonth[a.month] ?? 0;
                      const netClp = a.netClp;
                      const tc = a.exchangeRate;
                      // For Casablanca (isSpecial): user enters Neto CLP and TC manually.
@@ -676,7 +676,7 @@ const ProducerAccount = () => {
                        <TableCell className="text-right">USD {fmt(
                          isSpecial
                            ? data.advances.reduce((s: number, a: any) => {
-                               const disc = data.discountByMonth[a.month] ?? 0;
+                                const disc = effectiveDiscountByMonth[a.month] ?? 0;
                                const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
                                return s + netSp + disc;
                              }, 0)
@@ -715,10 +715,10 @@ const ProducerAccount = () => {
                 <CardContent>
                   {data.nextAdvance ? (() => {
                     const nA = data.nextAdvance;
-                    const disc = data.discountByMonth[nA.month] ?? 0;
+                    const disc = effectiveDiscountByMonth[nA.month] ?? 0;
                     const netSp = (nA.netClp && nA.exchangeRate) ? nA.netClp / nA.exchangeRate : 0;
                     const gross = isSpecial ? (netSp + disc) : data.nextPaymentGross;
-                    const net = isSpecial ? netSp : data.nextPaymentNet;
+                    const net = isSpecial ? netSp : (data.nextPaymentGross - disc);
                     return (
                      <Table>
                        <TableBody>
