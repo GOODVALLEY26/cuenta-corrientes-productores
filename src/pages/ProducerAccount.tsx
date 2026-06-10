@@ -220,9 +220,16 @@ const ProducerAccount = () => {
     const hasInitialInvoice = prodInvoices.some(i => i.document_type === 'factura');
     const docType = hasInitialInvoice ? 'Nota de Débito' : 'Factura';
 
+    const isSpecialProd = !!producer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
+    const advanceUsdFor = (a: any) => {
+      if (!isSpecialProd) return a.advance;
+      const disc = discountByMonth[a.month] ?? 0;
+      const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
+      return netSp + disc;
+    };
     const cumulativeAdvancesToNext = advances
       .filter(a => a.month <= (nextAdvance?.month ?? 12))
-      .reduce((s, a) => s + a.advance, 0);
+      .reduce((s, a) => s + advanceUsdFor(a), 0);
     const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
 
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
