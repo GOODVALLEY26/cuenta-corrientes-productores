@@ -474,8 +474,8 @@ const ProducerAccount = () => {
                   {data.hasCuotasUsd && data.nextAdvance && (() => {
                     const m = data.nextAdvance.month;
                     const clp = data.cuotaClpByMonth?.[m] ?? 0;
-                    const usd = data.cuotaUsdByMonth?.[m] ?? 0;
-                    const tc = data.cuotaTcByMonth?.[m];
+                    const tc = effectiveTc;
+                    const usd = tc ? clp / tc : 0;
                     if (clp === 0) {
                       return (
                         <TableRow className="bg-primary/5">
