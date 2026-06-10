@@ -28,6 +28,8 @@ const ProducerAccount = () => {
   const [docUsdOverride, setDocUsdOverride] = useState<string>('');
   const [editingTcId, setEditingTcId] = useState<string | null>(null);
   const [tcEditValue, setTcEditValue] = useState<string>('');
+  const [editingExRateId, setEditingExRateId] = useState<string | null>(null);
+  const [exRateEditValue, setExRateEditValue] = useState<string>('');
   const [addOpen, setAddOpen] = useState(false);
   const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
   const [newAdvCents, setNewAdvCents] = useState<string>('');
@@ -77,6 +79,7 @@ const ProducerAccount = () => {
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
       const netClp = (r as any).net_clp ? Number((r as any).net_clp) : null;
+      const exchangeRate = (r as any).exchange_rate ? Number((r as any).exchange_rate) : null;
       return {
         id: r.id,
         month: r.month,
@@ -85,6 +88,7 @@ const ProducerAccount = () => {
         paid: r.paid,
         paidDate: (r as any).paid_date,
         netClp,
+        exchangeRate,
       };
     }).sort((a, b) => a.month - b.month);
 
@@ -291,6 +295,19 @@ const ProducerAccount = () => {
     if (error) { toast.error('Error al guardar Neto CLP'); return; }
     setEditingTcId(null);
     setTcEditValue('');
+    loadData();
+  };
+
+  const saveExchangeRate = async (advanceId: string) => {
+    const val = exRateEditValue === '' ? null : Number(exRateEditValue);
+    if (val !== null && isNaN(val)) { toast.error('Valor inválido'); return; }
+    const { error } = await supabase
+      .from('advance_rates')
+      .update({ exchange_rate: val } as any)
+      .eq('id', advanceId);
+    if (error) { toast.error('Error al guardar TC'); return; }
+    setEditingExRateId(null);
+    setExRateEditValue('');
     loadData();
   };
 
@@ -514,14 +531,21 @@ const ProducerAccount = () => {
                         : data.advances
                       ).map((a: any) => {
                      const discount = data.discountByMonth[a.month] ?? 0;
-                     const net = a.advance - discount;
                      const netClp = a.netClp;
-                     const tc = netClp && net > 0 ? netClp / net : null;
+                     const tc = a.exchangeRate;
+                     // For Casablanca (isSpecial): user enters Neto CLP and TC manually.
+                     // Neto a Pagar USD = Neto CLP / TC; Anticipo USD = Neto + Desc; USD/kg = Anticipo / kg
+                     const netSpecial = (netClp && tc) ? netClp / tc : 0;
+                     const anticipoSpecial = netSpecial + discount;
+                     const usdPerKgSpecial = data.dryKg > 0 ? anticipoSpecial / Number(data.dryKg) : 0;
+                     const net = isSpecial ? netSpecial : (a.advance - discount);
+                     const anticipoUsd = isSpecial ? anticipoSpecial : a.advance;
+                     const usdPerKgDisplay = isSpecial ? usdPerKgSpecial : (a.centsPerKg / 100);
                      return (
                        <TableRow key={a.id}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                         <TableCell className="text-right">{fmtDec(a.centsPerKg / 100)}</TableCell>
-                         <TableCell className="text-right">USD {fmt(a.advance)}</TableCell>
+                         <TableCell className="text-right">{fmtDec(usdPerKgDisplay, 4)}</TableCell>
+                         <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
                          <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
                          {isSpecial && (
@@ -548,8 +572,26 @@ const ProducerAccount = () => {
                            </TableCell>
                          )}
                          {isSpecial && (
-                           <TableCell className="text-right text-sm text-muted-foreground">
-                             {tc ? `$${tc.toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '—'}
+                           <TableCell className="text-right p-1">
+                             {editingExRateId === a.id ? (
+                               <Input
+                                 type="number"
+                                 step="any"
+                                 className="h-8 w-28 text-right ml-auto"
+                                 value={exRateEditValue}
+                                 onChange={(e) => setExRateEditValue(e.target.value)}
+                                 onBlur={() => saveExchangeRate(a.id)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveExchangeRate(a.id); if (e.key === 'Escape') { setEditingExRateId(null); setExRateEditValue(''); } }}
+                                 autoFocus
+                               />
+                             ) : (
+                               <button
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm font-bold"
+                                 onClick={() => { setEditingExRateId(a.id); setExRateEditValue(tc ? String(tc) : ''); }}
+                               >
+                                 {tc ? `$${tc.toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground font-normal">—</span>}
+                               </button>
+                             )}
                            </TableCell>
                          )}
                          <TableCell className="text-center">
@@ -583,7 +625,15 @@ const ProducerAccount = () => {
                      <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
-                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
+                       <TableCell className="text-right">USD {fmt(
+                         isSpecial
+                           ? data.advances.reduce((s: number, a: any) => {
+                               const disc = data.discountByMonth[a.month] ?? 0;
+                               const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
+                               return s + netSp + disc;
+                             }, 0)
+                           : data.totalAdvances
+                       )}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
                        {isSpecial && (
