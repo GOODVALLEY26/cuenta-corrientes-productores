@@ -807,7 +807,7 @@ const ProducerAccount = () => {
                              type="date"
                              className="h-8 w-44 text-right ml-auto"
                              value={docDateOverride}
-                             onChange={(e) => setDocDateOverride(e.target.value)}
+                             onChange={(e) => { setDocDateOverride(e.target.value); persistOverride('docDate', e.target.value); }}
                            />
                          </TableCell>
                        </TableRow>
@@ -819,7 +819,7 @@ const ProducerAccount = () => {
                              step="any"
                              className="h-8 w-32 text-right ml-auto font-bold"
                              value={docUsdOverride !== '' ? docUsdOverride : data.docNeededUsd}
-                             onChange={(e) => setDocUsdOverride(e.target.value)}
+                             onChange={(e) => { setDocUsdOverride(e.target.value); persistOverride('docUsd', e.target.value); }}
                            />
                          </TableCell>
                        </TableRow>
@@ -833,7 +833,7 @@ const ProducerAccount = () => {
                                  className="h-8 w-32 text-right ml-auto"
                                  placeholder="TC"
                                  value={docTcOverride !== '' ? docTcOverride : (tc ?? '')}
-                                 onChange={(e) => setDocTcOverride(e.target.value)}
+                                 onChange={(e) => { setDocTcOverride(e.target.value); persistOverride('docTc', e.target.value); }}
                                />
                              </TableCell>
                            </TableRow>
