@@ -165,9 +165,13 @@ const ProducerAccount = () => {
           cuotaUsdByMonth[adv.month] = totalPaidUsd;
         } else {
           const totalInstClp = monthInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
-          const monthExRate = exRates.find(e => e.month === adv.month);
-          if (monthExRate) {
-            const tc = Number(monthExRate.rate);
+          // Prefer the TC manually set on the installment(s) themselves; fall back to monthly exchange_rates.
+          const instWithTc = monthInsts.find((p: any) => p.exchange_rate);
+          const tcSource = instWithTc
+            ? Number(instWithTc.exchange_rate)
+            : (exRates.find(e => e.month === adv.month)?.rate ? Number(exRates.find(e => e.month === adv.month)!.rate) : null);
+          if (tcSource) {
+            const tc = tcSource;
             const usdAmount = totalInstClp / tc;
             discountByMonth[adv.month] = usdAmount;
             cuotaTcByMonth[adv.month] = tc;
