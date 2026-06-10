@@ -313,6 +313,21 @@ const ProducerAccount = () => {
   const effectiveTc = data ? (docTcOverride !== '' ? Number(docTcOverride) : data.docExRate) : null;
   const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
 
+  // Recompute discount-per-month using the same effective TC shown in "Secado"
+  // so that "Desc. Secado" in Anticipos matches "Cuota en USD" displayed above.
+  const effectiveDiscountByMonth: Record<number, number> = (() => {
+    if (!data) return {};
+    if (data.hasCuotasUsd && effectiveTc) {
+      const out: Record<number, number> = {};
+      const src: Record<number, number> = data.cuotaClpByMonth ?? {};
+      for (const [m, clp] of Object.entries(src)) {
+        out[Number(m)] = Number(clp) / Number(effectiveTc);
+      }
+      return out;
+    }
+    return data.discountByMonth ?? {};
+  })();
+
   const selectedProducer = producers.find(p => p.id === selectedId);
   const isSpecial = !!selectedProducer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
 
@@ -383,6 +398,7 @@ const ProducerAccount = () => {
     const usd = effectiveDocUsd;
     return {
       ...data,
+      discountByMonth: effectiveDiscountByMonth,
       docExRate: tc,
       docNeededUsd: usd,
       needsDocument: usd > 0,
