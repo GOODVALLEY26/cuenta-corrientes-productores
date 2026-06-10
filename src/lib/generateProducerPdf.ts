@@ -421,8 +421,11 @@ export async function generateProducerPdf(data: PdfData) {
     let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
+      const fechaDoc = (data as any).docDate
+        ? new Date((data as any).docDate + 'T12:00:00').toLocaleDateString('es-CL')
+        : `${nextMonth} ${data.year}`;
       const tc = data.docExRate;
-      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
+      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Fecha', fechaDoc], ['Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
       if (tc) {
         const montoCLP = data.docNeededUsd * tc;
         const iva = montoCLP * 0.19;
