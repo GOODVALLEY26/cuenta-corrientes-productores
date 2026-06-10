@@ -665,30 +665,49 @@ const ProducerAccount = () => {
                   <CardTitle className="text-base">Próximo Pago</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {data.nextAdvance ? (
+                  {data.nextAdvance ? (() => {
+                    const nA = data.nextAdvance;
+                    const disc = data.discountByMonth[nA.month] ?? 0;
+                    const netSp = (nA.netClp && nA.exchangeRate) ? nA.netClp / nA.exchangeRate : 0;
+                    const gross = isSpecial ? (netSp + disc) : data.nextPaymentGross;
+                    const net = isSpecial ? netSp : data.nextPaymentNet;
+                    return (
                      <Table>
                        <TableBody>
                          <TableRow>
                            <TableCell className="font-medium">Mes</TableCell>
-                           <TableCell className="text-right font-bold">{MONTHS_FULL[data.nextAdvance.month - 1]}</TableCell>
+                           <TableCell className="text-right font-bold">{MONTHS_FULL[nA.month - 1]}</TableCell>
                          </TableRow>
+                         {isSpecial && (
+                           <>
+                             <TableRow>
+                               <TableCell className="font-medium">Neto CLP</TableCell>
+                               <TableCell className="text-right">{nA.netClp ? `CLP ${fmtClp(nA.netClp)}` : '—'}</TableCell>
+                             </TableRow>
+                             <TableRow>
+                               <TableCell className="font-medium">TC</TableCell>
+                               <TableCell className="text-right">{nA.exchangeRate ? `$${Number(nA.exchangeRate).toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '—'}</TableCell>
+                             </TableRow>
+                           </>
+                         )}
                          <TableRow>
                            <TableCell className="font-medium">Anticipo Bruto</TableCell>
-                           <TableCell className="text-right">USD {fmt(data.nextPaymentGross)}</TableCell>
+                           <TableCell className="text-right">USD {fmt(gross)}</TableCell>
                          </TableRow>
                          <TableRow>
                            <TableCell className="font-medium">Descuento Secado</TableCell>
                            <TableCell className="text-right text-destructive">
-                             {data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-'}
+                             {disc > 0 ? `-USD ${fmt(disc)}` : '-'}
                            </TableCell>
                          </TableRow>
                          <TableRow className="bg-muted/50">
                            <TableCell className="font-bold">Neto a Pagar</TableCell>
-                           <TableCell className="text-right font-bold text-lg">USD {fmt(data.nextPaymentNet)}</TableCell>
+                           <TableCell className="text-right font-bold text-lg">USD {fmt(net)}</TableCell>
                          </TableRow>
                        </TableBody>
                      </Table>
-                  ) : (
+                    );
+                  })() : (
                     <p className="text-muted-foreground text-center py-4">Todos los anticipos están pagados</p>
                   )}
                 </CardContent>
