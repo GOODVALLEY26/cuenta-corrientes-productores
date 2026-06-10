@@ -625,7 +625,15 @@ const ProducerAccount = () => {
                      <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
-                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
+                       <TableCell className="text-right">USD {fmt(
+                         isSpecial
+                           ? data.advances.reduce((s: number, a: any) => {
+                               const disc = data.discountByMonth[a.month] ?? 0;
+                               const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
+                               return s + netSp + disc;
+                             }, 0)
+                           : data.totalAdvances
+                       )}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
                        {isSpecial && (
