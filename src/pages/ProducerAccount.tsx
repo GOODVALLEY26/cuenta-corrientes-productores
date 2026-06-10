@@ -26,6 +26,7 @@ const ProducerAccount = () => {
   const [data, setData] = useState<any>(null);
   const [docTcOverride, setDocTcOverride] = useState<string>('');
   const [docUsdOverride, setDocUsdOverride] = useState<string>('');
+  const [docDateOverride, setDocDateOverride] = useState<string>('');
   const [editingTcId, setEditingTcId] = useState<string | null>(null);
   const [tcEditValue, setTcEditValue] = useState<string>('');
   const [editingExRateId, setEditingExRateId] = useState<string | null>(null);
@@ -280,6 +281,7 @@ const ProducerAccount = () => {
     });
     setDocTcOverride('');
     setDocUsdOverride('');
+    setDocDateOverride('');
   };
 
   const fmt = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('en-US');
@@ -362,6 +364,7 @@ const ProducerAccount = () => {
       docExRate: tc,
       docNeededUsd: usd,
       needsDocument: usd > 0,
+      docDate: docDateOverride || null,
       isSpecial,
       ivaPagado: data.ivaPagado,
       ivaPayments: data.ivaPayments,
@@ -777,7 +780,14 @@ const ProducerAccount = () => {
                        </TableRow>
                        <TableRow>
                          <TableCell className="font-medium">Fecha Documento</TableCell>
-                         <TableCell className="text-right">{nextMonth || '-'} {data.year}</TableCell>
+                         <TableCell className="text-right">
+                           <Input
+                             type="date"
+                             className="h-8 w-44 text-right ml-auto"
+                             value={docDateOverride}
+                             onChange={(e) => setDocDateOverride(e.target.value)}
+                           />
+                         </TableCell>
                        </TableRow>
                        <TableRow>
                          <TableCell className="font-medium">Monto Neto USD</TableCell>
