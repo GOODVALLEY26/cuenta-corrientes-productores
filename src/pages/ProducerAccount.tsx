@@ -28,6 +28,8 @@ const ProducerAccount = () => {
   const [docUsdOverride, setDocUsdOverride] = useState<string>('');
   const [editingTcId, setEditingTcId] = useState<string | null>(null);
   const [tcEditValue, setTcEditValue] = useState<string>('');
+  const [editingExRateId, setEditingExRateId] = useState<string | null>(null);
+  const [exRateEditValue, setExRateEditValue] = useState<string>('');
   const [addOpen, setAddOpen] = useState(false);
   const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
   const [newAdvCents, setNewAdvCents] = useState<string>('');
@@ -77,6 +79,7 @@ const ProducerAccount = () => {
     const advances = rates.map(r => {
       const advance = (Number(dryKg) * Number(r.cents_per_kg)) / 100;
       const netClp = (r as any).net_clp ? Number((r as any).net_clp) : null;
+      const exchangeRate = (r as any).exchange_rate ? Number((r as any).exchange_rate) : null;
       return {
         id: r.id,
         month: r.month,
@@ -85,6 +88,7 @@ const ProducerAccount = () => {
         paid: r.paid,
         paidDate: (r as any).paid_date,
         netClp,
+        exchangeRate,
       };
     }).sort((a, b) => a.month - b.month);
 
@@ -291,6 +295,19 @@ const ProducerAccount = () => {
     if (error) { toast.error('Error al guardar Neto CLP'); return; }
     setEditingTcId(null);
     setTcEditValue('');
+    loadData();
+  };
+
+  const saveExchangeRate = async (advanceId: string) => {
+    const val = exRateEditValue === '' ? null : Number(exRateEditValue);
+    if (val !== null && isNaN(val)) { toast.error('Valor inválido'); return; }
+    const { error } = await supabase
+      .from('advance_rates')
+      .update({ exchange_rate: val } as any)
+      .eq('id', advanceId);
+    if (error) { toast.error('Error al guardar TC'); return; }
+    setEditingExRateId(null);
+    setExRateEditValue('');
     loadData();
   };
 
