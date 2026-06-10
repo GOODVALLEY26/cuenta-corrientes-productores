@@ -407,9 +407,14 @@ const ProducerAccount = () => {
     const pdfNextPaymentNet = isSpecial && nextAdvance
       ? pdfNextNetSpecial
       : data.nextPaymentGross - pdfNextDiscount;
+    const pdfCuotaTcByMonth = data.hasCuotasUsd && tc
+      ? Object.fromEntries(Object.keys(data.cuotaClpByMonth ?? {}).map((m) => [Number(m), Number(tc)]))
+      : data.cuotaTcByMonth;
     return {
       ...data,
       discountByMonth: effectiveDiscountByMonth,
+      cuotaTcByMonth: pdfCuotaTcByMonth,
+      cuotaUsdByMonth: effectiveDiscountByMonth,
       nextDiscount: pdfNextDiscount,
       nextPaymentGross: pdfNextPaymentGross,
       nextPaymentNet: pdfNextPaymentNet,
