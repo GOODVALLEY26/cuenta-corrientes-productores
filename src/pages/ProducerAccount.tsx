@@ -420,7 +420,7 @@ const ProducerAccount = () => {
       nextPaymentNet: pdfNextPaymentNet,
       docExRate: tc,
       docNeededUsd: usd,
-      needsDocument: usd > 0,
+      needsDocument: data.needsDocument,
       docDate: docDateOverride || null,
       isSpecial,
       ivaPagado: data.ivaPagado,
@@ -797,7 +797,7 @@ const ProducerAccount = () => {
                       <TableBody>
                         <TableRow>
                           <TableCell className="font-medium text-muted-foreground">Anticipos acumulados</TableCell>
-                          <TableCell className="text-right">USD {fmt(data.docNeededUsd + data.totalInvoicedUsd)}</TableCell>
+                          <TableCell className="text-right">USD {fmt(effectiveDocUsd + data.totalInvoicedUsd)}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell className="font-medium text-muted-foreground">Ya facturado</TableCell>
@@ -805,7 +805,7 @@ const ProducerAccount = () => {
                         </TableRow>
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-bold">USD por Facturar</TableCell>
-                          <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(data.docNeededUsd)}</TableCell>
+                          <TableCell className="text-right font-bold text-primary text-lg">USD {fmt(effectiveDocUsd)}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
