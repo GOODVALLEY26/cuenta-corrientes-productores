@@ -193,6 +193,10 @@ export async function generateProducerPdf(data: PdfData) {
     ['Método pago', methodLabel[data.method] ?? data.method],
   ];
 
+  if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
+    secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
+  }
+
   if (data.hasCuotasUsd && data.nextAdvance) {
     const nm = data.nextAdvance.month;
     const tc = data.cuotaTcByMonth?.[nm];
@@ -205,8 +209,6 @@ export async function generateProducerPdf(data: PdfData) {
       secadoBody.push(['TC utilizado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
       secadoBody.push(['Cuota en USD', tc ? `USD ${fmt(usdVal)}` : 'Pendiente TC']);
     }
-  } else if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
-    secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
   }
 
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
@@ -353,7 +355,7 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   // 3. PRÓXIMO PAGO + USD POR FACTURAR (left) & DOCUMENTO REQUERIDO (right)
   // ═══════════════════════════════════════════
-  if (data.nextAdvance || data.needsDocument) {
+  {
     y = ensureSpace(doc, y, 50, m);
     const pY = y;
     const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '-';
@@ -433,7 +435,7 @@ export async function generateProducerPdf(data: PdfData) {
     }
 
     // RIGHT: Documento Requerido
-    let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
+    let rpY = sectionTitle(doc, rx, pY, halfW, 'Documento Requerido');
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito' ? `Ajuste de precio de anticipo ${nextMonth}` : `Anticipo compra fruta temporada ${data.year}`;
       const fechaDoc = (data as any).docDate
