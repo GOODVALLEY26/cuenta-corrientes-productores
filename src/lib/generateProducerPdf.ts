@@ -45,6 +45,7 @@ interface PdfData {
   cuotaUsdByMonth?: Record<number, number>;
   prodInvoices?: any[];
   isSpecial?: boolean;
+  docDate?: string | null;
 }
 
 const methodLabel: Record<string, string> = {
@@ -192,16 +193,22 @@ export async function generateProducerPdf(data: PdfData) {
     ['Método pago', methodLabel[data.method] ?? data.method],
   ];
 
+  if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
+    secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
+  }
+
   if (data.hasCuotasUsd && data.nextAdvance) {
     const nm = data.nextAdvance.month;
     const tc = data.cuotaTcByMonth?.[nm];
     const clpVal = data.cuotaClpByMonth?.[nm] ?? data.cuotaClp ?? 0;
     const usdVal = data.cuotaUsdByMonth?.[nm] ?? 0;
-    secadoBody.push(['Cuota mensual CLP', `CLP ${fmtClp(clpVal)}`]);
-    secadoBody.push(['TC observado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
-    secadoBody.push(['Cuota en USD', tc ? `USD ${fmt(usdVal)}` : 'Pendiente TC']);
-  } else if (data.method === 'pago_clp' && (data.cuotaClp ?? 0) > 0) {
-    secadoBody.push(['Cuota a depositar', `CLP ${fmtClp(data.cuotaClp ?? 0)}`]);
+    if (clpVal === 0) {
+      secadoBody.push(['Descuento secado', 'Sin cuota este mes']);
+    } else {
+      secadoBody.push(['Cuota mensual CLP', `CLP ${fmtClp(clpVal)}`]);
+      secadoBody.push(['TC utilizado', tc ? `$${Number(tc).toLocaleString('es-CL')}` : 'Sin TC']);
+      secadoBody.push(['Cuota en USD', tc ? `USD ${fmt(usdVal)}` : 'Pendiente TC']);
+    }
   }
 
   let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
@@ -240,7 +247,7 @@ export async function generateProducerPdf(data: PdfData) {
   const showDiscount = Object.values(data.discountByMonth).some(v => v > 0) || data.hasCuotasUsd;
   const showSpecialCols = !!data.isSpecial;
   const advHeaders: string[] = ['Mes', 'USD/kg', 'Anticipo USD'];
-  if (showDiscount) advHeaders.push('Desc. Secado', 'Neto USD');
+  if (showDiscount) advHeaders.push('Desc. Secado', 'Neto a Pagar');
   if (showSpecialCols) advHeaders.push('Neto CLP', 'TC');
   advHeaders.push('Estado', 'Fecha Pago');
 
@@ -290,7 +297,7 @@ export async function generateProducerPdf(data: PdfData) {
     totalRow.push(totalNetClp > 0 ? `CLP ${fmtClp(totalNetClp)}` : '-');
     totalRow.push('');
   }
-  totalRow.push(`USD ${fmt(paidNetSum)}`);
+  totalRow.push(`Pagado: USD ${fmt(paidNetSum)}`);
   totalRow.push('');
   advRows.push(totalRow);
 
@@ -348,7 +355,7 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   // 3. PRÓXIMO PAGO + USD POR FACTURAR (left) & DOCUMENTO REQUERIDO (right)
   // ═══════════════════════════════════════════
-  if (data.nextAdvance || data.needsDocument) {
+  {
     y = ensureSpace(doc, y, 50, m);
     const pY = y;
     const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '-';
@@ -356,14 +363,16 @@ export async function generateProducerPdf(data: PdfData) {
     // LEFT: Próximo Pago
     let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
     const payRows: string[][] = data.nextAdvance ? (() => {
-      const rows: string[][] = [
-        ['Mes', nextMonth],
-        ['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`],
-      ];
-      if (data.nextDiscount > 0) rows.push(['Desc. Secado', `-USD ${fmt(data.nextDiscount)}`]);
+      const rows: string[][] = [['Mes', nextMonth]];
+      if (showSpecialCols) {
+        rows.push(['Neto CLP', data.nextAdvance?.netClp ? `CLP ${fmtClp(Number(data.nextAdvance.netClp))}` : '-']);
+        rows.push(['TC', data.nextAdvance?.exchangeRate ? `$${Number(data.nextAdvance.exchangeRate).toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '-']);
+      }
+      rows.push(['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`]);
+      rows.push(['Descuento Secado', data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-']);
       rows.push(['Neto a Pagar', `USD ${fmt(data.nextPaymentNet)}`]);
       return rows;
-    })() : [['Estado', 'Sin próximo pago pendiente']];
+    })() : [['Estado', 'Todos los anticipos están pagados']];
 
     autoTable(doc, {
       startY: lpY,
@@ -382,7 +391,7 @@ export async function generateProducerPdf(data: PdfData) {
             h.cell.styles.fontSize = 10;
             h.cell.styles.textColor = [...PRIMARY];
           }
-          if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
+        if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
         }
       },
     });
@@ -394,7 +403,7 @@ export async function generateProducerPdf(data: PdfData) {
       sectionTitle(doc, lx, facY, halfW, 'USD por Facturar');
       const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
       const facRows: string[][] = [
-        ['Anticipos acum.', `USD ${fmt(cumulativeAdv)}`],
+        ['Anticipos acumulados', `USD ${fmt(cumulativeAdv)}`],
         ['Ya facturado', `-USD ${fmt(data.totalInvoicedUsd)}`],
         ['USD por Facturar', `USD ${fmt(data.docNeededUsd)}`],
       ];
@@ -410,7 +419,7 @@ export async function generateProducerPdf(data: PdfData) {
           if (h.section === 'body') {
             const label = String(h.row.raw?.[0] ?? '');
             if (label === 'Ya facturado') h.cell.styles.textColor = [...ACCENT_RED];
-            if (label === 'Anticipos acum.') {
+            if (label === 'Anticipos acumulados') {
               h.cell.styles.fontSize = 7;
               h.cell.styles.textColor = [100, 100, 100];
             }
@@ -426,21 +435,21 @@ export async function generateProducerPdf(data: PdfData) {
     }
 
     // RIGHT: Documento Requerido
-    let rpY = sectionTitle(doc, rx, pY, halfW, data.needsDocument ? 'Documento Requerido' : 'Documento');
+    let rpY = sectionTitle(doc, rx, pY, halfW, 'Documento Requerido');
     if (data.needsDocument) {
-      const glosa = data.docType === 'Nota de Débito' ? `Ajuste precio anticipo ${nextMonth}` : `Anticipo compra fruta ${data.year}`;
+      const glosa = data.docType === 'Nota de Débito' ? `Ajuste de precio de anticipo ${nextMonth}` : `Anticipo compra fruta temporada ${data.year}`;
       const fechaDoc = (data as any).docDate
         ? new Date((data as any).docDate + 'T12:00:00').toLocaleDateString('es-CL')
         : `${nextMonth} ${data.year}`;
       const tc = data.docExRate;
-      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Fecha', fechaDoc], ['Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
+      const docRows: string[][] = [['Tipo', data.docType], ['Glosa', glosa], ['Fecha Documento', fechaDoc], ['Monto Neto USD', `USD ${fmt(data.docNeededUsd)}`]];
       if (tc) {
         const montoCLP = data.docNeededUsd * tc;
         const iva = montoCLP * 0.19;
-        docRows.push(['T.C.', `$${Number(tc).toLocaleString('es-CL')}`]);
-        docRows.push(['Neto CLP', `CLP ${fmtClp(Math.round(montoCLP))}`]);
+        docRows.push(['Tipo de Cambio', `$${Number(tc).toLocaleString('es-CL')}`]);
+        docRows.push(['Monto Neto CLP', `CLP ${fmtClp(Math.round(montoCLP))}`]);
         docRows.push(['IVA (19%)', `CLP ${fmtClp(Math.round(iva))}`]);
-        docRows.push(['Total Doc.', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
+        docRows.push(['Total Documento', `CLP ${fmtClp(Math.round(montoCLP + iva))}`]);
       }
       autoTable(doc, {
         startY: rpY,
@@ -453,7 +462,7 @@ export async function generateProducerPdf(data: PdfData) {
         didParseCell: (h) => {
           if (h.section === 'body') {
             const label = String(h.row.raw?.[0] ?? '');
-            if (label === 'Total Doc.') {
+            if (label === 'Total Documento') {
               h.cell.styles.fontStyle = 'bold';
               h.cell.styles.fillColor = [...MUTED_BG];
               h.cell.styles.textColor = [...PRIMARY];
@@ -471,11 +480,18 @@ export async function generateProducerPdf(data: PdfData) {
         theme: 'plain',
         styles: { fontSize: fs, cellPadding: cp, textColor: [50, 50, 50], overflow: 'linebreak' },
         body: [
-          ['Facturar a', 'Exportadora Goodvalley SpA'],
+          ['Facturar a:', ''],
+          ['Razón social', 'Exportadora Goodvalley SpA'],
           ['RUT', '78.328.166-K'],
           ['Giro', 'Compra, venta, importación y exportación de productos agrícolas'],
         ],
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 1: { halign: 'left' } },
+        didParseCell: (h) => {
+          if (h.section === 'body' && h.row.index === 0) {
+            h.cell.styles.fontStyle = 'bold';
+            h.cell.styles.textColor = [...PRIMARY];
+          }
+        },
       });
     } else {
       autoTable(doc, {
