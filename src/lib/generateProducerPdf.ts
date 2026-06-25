@@ -297,7 +297,7 @@ export async function generateProducerPdf(data: PdfData) {
     totalRow.push(totalNetClp > 0 ? `CLP ${fmtClp(totalNetClp)}` : '-');
     totalRow.push('');
   }
-  totalRow.push(`USD ${fmt(paidNetSum)}`);
+  totalRow.push(`Pagado: USD ${fmt(paidNetSum)}`);
   totalRow.push('');
   advRows.push(totalRow);
 
