@@ -689,7 +689,7 @@ const ProducerAccount = () => {
                      );
                    })}
                    {data.advances.length > 0 && (
-                     <TableRow className="font-bold bg-muted/50">
+                      <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
                        <TableCell className="text-right">USD {fmt(
@@ -712,7 +712,14 @@ const ProducerAccount = () => {
                        )}
                        {isSpecial && <TableCell></TableCell>}
                        <TableCell className="text-center">
-                         <span className="text-green-600">Pagado: USD {fmt(data.paidAdvances)}</span>
+                          <span className="text-green-600">Pagado: USD {fmt(
+                            isSpecial
+                              ? data.advances.filter((a: any) => a.paid).reduce((s: number, a: any) => {
+                                  const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
+                                  return s + netSp;
+                                }, 0)
+                              : data.paidAdvances
+                          )}</span>
                        </TableCell>
                        <TableCell></TableCell>
                        {isSpecial && <TableCell></TableCell>}
