@@ -159,7 +159,10 @@ const ProducerAccount = () => {
     // (regardless of installment_currency). This covers both USD cuotas and CLP cuotas
     // entered manually for descuento_usd producers.
     const hasInstallmentEntries = installmentPayments.length > 0;
-    const hasCuotasUsd = hasInstallmentEntries;
+    // For "pago_clp" producers we never want to subtract drying as USD from the
+    // advances — only the CLP cuota is registered. So treat them as if they had
+    // no USD cuotas regardless of installment_payments entries.
+    const hasCuotasUsd = hasInstallmentEntries && method !== 'pago_clp';
 
     const cuotaTcByMonth: Record<number, number | null> = {};
     const cuotaClpByMonth: Record<number, number> = {};
@@ -180,10 +183,10 @@ const ProducerAccount = () => {
         if (paidInsts.length > 0) {
           const totalPaidUsd = paidInsts.reduce((s: number, p: any) => s + Number(p.amount_usd), 0);
           const totalPaidClp = paidInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
-          discountByMonth[adv.month] = totalPaidUsd;
+          discountByMonth[adv.month] = method === 'pago_clp' ? 0 : totalPaidUsd;
           cuotaTcByMonth[adv.month] = paidInsts[0].exchange_rate ? Number(paidInsts[0].exchange_rate) : null;
           cuotaClpByMonth[adv.month] = totalPaidClp;
-          cuotaUsdByMonth[adv.month] = totalPaidUsd;
+          cuotaUsdByMonth[adv.month] = method === 'pago_clp' ? 0 : totalPaidUsd;
           paidByMonth[adv.month] = true;
         } else {
           const totalInstClp = monthInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
@@ -195,10 +198,10 @@ const ProducerAccount = () => {
           if (tcSource) {
             const tc = tcSource;
             const usdAmount = totalInstClp / tc;
-            discountByMonth[adv.month] = usdAmount;
+            discountByMonth[adv.month] = method === 'pago_clp' ? 0 : usdAmount;
             cuotaTcByMonth[adv.month] = tc;
             cuotaClpByMonth[adv.month] = totalInstClp;
-            cuotaUsdByMonth[adv.month] = usdAmount;
+            cuotaUsdByMonth[adv.month] = method === 'pago_clp' ? 0 : usdAmount;
           } else {
             discountByMonth[adv.month] = 0;
             cuotaTcByMonth[adv.month] = null;
