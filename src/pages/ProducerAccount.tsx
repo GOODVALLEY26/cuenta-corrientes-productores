@@ -132,9 +132,19 @@ const ProducerAccount = () => {
     const nextPendingInstallment = sortedInstallments.find((p: any) => !p.paid);
     let cuotaClp = 0;
     if (installmentPayments.length > 0) {
-      cuotaClp = nextPendingInstallment
-        ? Number(nextPendingInstallment.amount_clp)
-        : Number(sortedInstallments[sortedInstallments.length - 1].amount_clp);
+      if (nextPendingInstallment) {
+        // Sum all pending installments that share the same installment_number
+        // (covers producers with multiple drying invoices in the same period).
+        const nextNum = nextPendingInstallment.installment_number;
+        cuotaClp = sortedInstallments
+          .filter((p: any) => !p.paid && p.installment_number === nextNum)
+          .reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+      } else {
+        const lastNum = sortedInstallments[sortedInstallments.length - 1].installment_number;
+        cuotaClp = sortedInstallments
+          .filter((p: any) => p.installment_number === lastNum)
+          .reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
+      }
     } else {
       const numInstallments = advances.length + 1;
       cuotaClp = numInstallments > 0 ? totalDryingClp / numInstallments : 0;
