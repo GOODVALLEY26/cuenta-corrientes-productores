@@ -164,6 +164,7 @@ const ProducerAccount = () => {
     const cuotaTcByMonth: Record<number, number | null> = {};
     const cuotaClpByMonth: Record<number, number> = {};
     const cuotaUsdByMonth: Record<number, number> = {};
+    const paidByMonth: Record<number, boolean> = {};
 
     if (hasInstallmentEntries) {
       for (const adv of advances) {
@@ -183,6 +184,7 @@ const ProducerAccount = () => {
           cuotaTcByMonth[adv.month] = paidInsts[0].exchange_rate ? Number(paidInsts[0].exchange_rate) : null;
           cuotaClpByMonth[adv.month] = totalPaidClp;
           cuotaUsdByMonth[adv.month] = totalPaidUsd;
+          paidByMonth[adv.month] = true;
         } else {
           const totalInstClp = monthInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
           // Prefer the TC manually set on the installment(s) themselves; fall back to monthly exchange_rates.
