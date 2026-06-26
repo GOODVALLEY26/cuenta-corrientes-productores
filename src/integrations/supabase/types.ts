@@ -509,7 +509,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      shared_account_user_id: { Args: never; Returns: string }
+      [_ in never]: never
     }
     Enums: {
       document_type: "factura" | "nota_debito" | "nota_credito"
