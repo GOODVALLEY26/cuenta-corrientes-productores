@@ -164,6 +164,7 @@ const ProducerAccount = () => {
     const cuotaTcByMonth: Record<number, number | null> = {};
     const cuotaClpByMonth: Record<number, number> = {};
     const cuotaUsdByMonth: Record<number, number> = {};
+    const paidByMonth: Record<number, boolean> = {};
 
     if (hasInstallmentEntries) {
       for (const adv of advances) {
@@ -183,6 +184,7 @@ const ProducerAccount = () => {
           cuotaTcByMonth[adv.month] = paidInsts[0].exchange_rate ? Number(paidInsts[0].exchange_rate) : null;
           cuotaClpByMonth[adv.month] = totalPaidClp;
           cuotaUsdByMonth[adv.month] = totalPaidUsd;
+          paidByMonth[adv.month] = true;
         } else {
           const totalInstClp = monthInsts.reduce((s: number, p: any) => s + Number(p.amount_clp), 0);
           // Prefer the TC manually set on the installment(s) themselves; fall back to monthly exchange_rates.
@@ -301,6 +303,7 @@ const ProducerAccount = () => {
       cuotaTcByMonth,
       cuotaClpByMonth,
       cuotaUsdByMonth,
+      paidByMonth,
       prodInvoices,
     });
     // overrides are persisted in localStorage; do not reset here
@@ -320,8 +323,13 @@ const ProducerAccount = () => {
     if (data.hasCuotasUsd && effectiveTc) {
       const out: Record<number, number> = {};
       const src: Record<number, number> = data.cuotaClpByMonth ?? {};
+      const paid: Record<number, boolean> = (data as any).paidByMonth ?? {};
+      const usdSrc: Record<number, number> = data.cuotaUsdByMonth ?? {};
       for (const [m, clp] of Object.entries(src)) {
-        out[Number(m)] = Number(clp) / Number(effectiveTc);
+        const mn = Number(m);
+        // For paid months, use the actual USD recorded in installment_payments
+        // (matches "Cuotas de Secado"). Only recompute via doc TC for unpaid months.
+        out[mn] = paid[mn] ? Number(usdSrc[mn] ?? 0) : Number(clp) / Number(effectiveTc);
       }
       return out;
     }
