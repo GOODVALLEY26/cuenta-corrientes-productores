@@ -173,7 +173,7 @@ export async function generateProducerPdf(data: PdfData) {
     body: [
       ['Kilos deshidratados totales', fmtKg(data.dryKg)],
       ['Total Facturado USD', `USD ${fmt(data.totalInvoicedUsd)}`],
-      ['Total Facturado CLP', `CLP ${fmtClp(data.totalInvoicedClp)}`],
+      ['Total Facturado CLP (Neto)', `CLP ${fmtClp(data.totalInvoicedClp)}`],
     ],
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { halign: 'right' } },
     didParseCell: (h) => {
