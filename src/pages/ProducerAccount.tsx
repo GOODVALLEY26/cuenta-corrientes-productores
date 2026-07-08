@@ -503,7 +503,7 @@ const ProducerAccount = () => {
                     <TableCell className="text-right font-bold">USD {fmt(data.totalInvoicedUsd)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium">Total Facturado CLP</TableCell>
+                    <TableCell className="font-medium">Total Facturado CLP (Neto)</TableCell>
                     <TableCell className="text-right">CLP {fmtClp(data.totalInvoicedClp)}</TableCell>
                   </TableRow>
                 </TableBody>
