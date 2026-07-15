@@ -89,6 +89,14 @@ function ensureSpace(doc: jsPDF, y: number, needed: number, m: number): number {
   return y;
 }
 
+function safeCardBorder(doc: jsPDF, x: number, y: number, w: number, h: number, startPage: number) {
+  // Only draw the rounded card border when the section stayed on a single page.
+  // Cross-page rectangles look broken (drawn at coordinates that no longer apply).
+  if (doc.internal.getNumberOfPages() === startPage) {
+    cardBorder(doc, x, y, w, h);
+  }
+}
+
 async function loadLogoAsBase64(): Promise<string | null> {
   try {
     const response = await fetch('/images/goodvalley-logo.png');
