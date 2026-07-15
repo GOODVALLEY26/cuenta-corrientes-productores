@@ -327,7 +327,6 @@ const ProducerAccount = () => {
   const fmtClp = (n: number | undefined | null) => Math.round(n ?? 0).toLocaleString('es-CL');
 
   const effectiveTc = data ? (docTcOverride !== '' ? Number(docTcOverride) : data.docExRate) : null;
-  const effectiveDocUsd = data ? (docUsdOverride !== '' ? Number(docUsdOverride) : data.docNeededUsd) : 0;
 
   // Recompute discount-per-month using the same effective TC shown in "Secado"
   // so that "Desc. Secado" in Anticipos matches "Cuota en USD" displayed above.
@@ -351,6 +350,24 @@ const ProducerAccount = () => {
 
   const selectedProducer = producers.find(p => p.id === selectedId);
   const isSpecial = !!selectedProducer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
+
+  // For Casablanca: "Anticipos acumulados" must equal the sum of the
+  // "Anticipo USD" column across all months (Neto USD + Desc. Secado por mes).
+  const specialAnticiposAcumUsd = data && isSpecial
+    ? data.advances.reduce((s: number, a: any) => {
+        const disc = effectiveDiscountByMonth[a.month] ?? 0;
+        const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
+        return s + netSp + disc;
+      }, 0)
+    : 0;
+
+  const effectiveDocUsd = data
+    ? (docUsdOverride !== ''
+        ? Number(docUsdOverride)
+        : (isSpecial
+            ? Math.max(0, specialAnticiposAcumUsd - Number(data.totalInvoicedUsd ?? 0))
+            : data.docNeededUsd))
+    : 0;
 
   const saveNetClp = async (advanceId: string) => {
     const val = tcEditValue === '' ? null : Number(tcEditValue);
