@@ -248,8 +248,9 @@ export async function generateProducerPdf(data: PdfData) {
   const rEnd1 = (doc as any).lastAutoTable.finalY;
 
   const h1 = Math.max(lEnd1, rEnd1) - y + 1;
-  cardBorder(doc, lx, y, halfW, h1);
-  cardBorder(doc, rx, y, halfW, h1);
+  const p1 = currentPage(doc);
+  safeCardBorder(doc, lx, y, halfW, h1, p1);
+  safeCardBorder(doc, rx, y, halfW, h1, p1);
   y = Math.max(lEnd1, rEnd1) + sp;
 
   // ═══════════════════════════════════════════
@@ -312,8 +313,12 @@ export async function generateProducerPdf(data: PdfData) {
   totalRow.push('');
   advRows.push(totalRow);
 
-  y = ensureSpace(doc, y, 40, m);
+  // Anticipos table can be tall; reserve enough space for header + several rows,
+  // otherwise force a new page to avoid splitting the section header away from the body.
+  const advNeed = Math.min(120, 20 + (advRows.length + 1) * (showSpecialCols ? 5 : 6));
+  y = ensureSpace(doc, y, advNeed, m);
   const aY = y;
+  const aPage = currentPage(doc);
   sectionTitle(doc, m, aY, cw, `Anticipos ${data.year}`);
   const statusCol = 3 + (showDiscount ? 2 : 0) + (showSpecialCols ? 2 : 0);
 
@@ -360,15 +365,18 @@ export async function generateProducerPdf(data: PdfData) {
   });
 
   const aEnd = (doc as any).lastAutoTable.finalY;
-  cardBorder(doc, m, aY, cw, aEnd - aY + 1);
+  safeCardBorder(doc, m, aY, cw, aEnd - aY + 1, aPage);
   y = aEnd + sp;
 
   // ═══════════════════════════════════════════
   // 3. PRÓXIMO PAGO + USD POR FACTURAR (left) & DOCUMENTO REQUERIDO (right)
   // ═══════════════════════════════════════════
   {
-    y = ensureSpace(doc, y, 50, m);
+    // Próximo pago + Documento requerido block can be tall (up to ~14 rows on the right side).
+    // Reserve ~85mm so the two-column block starts on a new page when needed.
+    y = ensureSpace(doc, y, 85, m);
     const pY = y;
+    const pPage = currentPage(doc);
     const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '-';
 
     // LEFT: Próximo Pago
@@ -518,16 +526,17 @@ export async function generateProducerPdf(data: PdfData) {
     const rpEnd = (doc as any).lastAutoTable.finalY;
 
     const pH = Math.max(lpEnd, rpEnd) - pY + 1;
-    cardBorder(doc, lx, pY, halfW, pH);
-    cardBorder(doc, rx, pY, halfW, pH);
+    safeCardBorder(doc, lx, pY, halfW, pH, pPage);
+    safeCardBorder(doc, rx, pY, halfW, pH, pPage);
     y = Math.max(lpEnd, rpEnd) + sp;
   }
 
   // ═══════════════════════════════════════════
   // 4. BALANCE IVA
   // ═══════════════════════════════════════════
-  y = ensureSpace(doc, y, 40, m);
+  y = ensureSpace(doc, y, 45, m);
   const iY = y;
+  const iPage = currentPage(doc);
   sectionTitle(doc, m, iY, cw, 'Balance IVA (perspectiva del productor)');
 
   const ivaAFavor = data.ivaProductor;
@@ -562,14 +571,15 @@ export async function generateProducerPdf(data: PdfData) {
   });
 
   doc.setTextColor(0, 0, 0);
-  cardBorder(doc, m, iY, cw, bY + bH - iY + 3);
+  safeCardBorder(doc, m, iY, cw, bY + bH - iY + 3, iPage);
   y = bY + bH + 3 + sp;
 
   // Historial de pagos de IVA
   const ivaPays = data.ivaPayments ?? [];
   if (ivaPays.length > 0) {
-    y = ensureSpace(doc, y, 30, m);
+    y = ensureSpace(doc, y, Math.min(80, 25 + ivaPays.length * 6), m);
     const ipY = y;
+    const ipPage = currentPage(doc);
     sectionTitle(doc, m, ipY, cw, 'Historial de Pagos de IVA');
     const ipRows = [...ivaPays]
       .sort((a, b) => a.payment_date.localeCompare(b.payment_date))
@@ -590,7 +600,7 @@ export async function generateProducerPdf(data: PdfData) {
       theme: 'grid',
     });
     const endY = (doc as any).lastAutoTable.finalY;
-    cardBorder(doc, m, ipY, cw, endY - ipY + 3);
+    safeCardBorder(doc, m, ipY, cw, endY - ipY + 3, ipPage);
     y = endY + 3 + sp;
   }
 
@@ -599,8 +609,9 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   const invoices = data.prodInvoices ?? [];
   if (invoices.length > 0) {
-    y = ensureSpace(doc, y, 40, m);
+    y = ensureSpace(doc, y, Math.min(120, 25 + (invoices.length + 1) * 6), m);
     const invY = y;
+    const invPage = currentPage(doc);
     sectionTitle(doc, m, invY, cw, 'Historial de Facturas del Productor');
 
     const docTypeLabels: Record<string, string> = {
@@ -653,7 +664,7 @@ export async function generateProducerPdf(data: PdfData) {
     });
 
     const invEnd = (doc as any).lastAutoTable.finalY;
-    cardBorder(doc, m, invY, cw, invEnd - invY + 1);
+    safeCardBorder(doc, m, invY, cw, invEnd - invY + 1, invPage);
     y = invEnd + sp;
   }
 
