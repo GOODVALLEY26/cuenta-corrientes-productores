@@ -732,33 +732,24 @@ const ProducerAccount = () => {
                       <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
-                       <TableCell className="text-right">USD {fmt(
-                         isSpecial
-                           ? data.advances.reduce((s: number, a: any) => {
-                                const disc = effectiveDiscountByMonth[a.month] ?? 0;
-                               const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-                               return s + netSp + disc;
-                             }, 0)
-                           : data.totalAdvances
-                       )}</TableCell>
+                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
                        {isSpecial && (
                          <TableCell className="text-right">
                            CLP {fmtClp(data.advances.reduce((s: number, a: any) => {
-                             return s + (a.netClp ?? 0);
+                             const disc = effectiveDiscountByMonth[a.month] ?? 0;
+                             return s + (a.exchangeRate ? (a.advance - disc) * a.exchangeRate : 0);
                            }, 0))}
                          </TableCell>
                        )}
                        {isSpecial && <TableCell></TableCell>}
                        <TableCell className="text-center">
                           <span className="text-green-600">Pagado: USD {fmt(
-                            isSpecial
-                              ? data.advances.filter((a: any) => a.paid).reduce((s: number, a: any) => {
-                                  const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-                                  return s + netSp;
-                                }, 0)
-                              : data.paidAdvances
+                            data.advances.filter((a: any) => a.paid).reduce((s: number, a: any) => {
+                              const disc = effectiveDiscountByMonth[a.month] ?? 0;
+                              return s + (a.advance - disc);
+                            }, 0)
                           )}</span>
                        </TableCell>
                        <TableCell></TableCell>
