@@ -349,11 +349,7 @@ const ProducerAccount = () => {
   // For Casablanca: "Anticipos acumulados" must equal the sum of the
   // "Anticipo USD" column across all months (Neto USD + Desc. Secado por mes).
   const specialAnticiposAcumUsd = data && isSpecial
-    ? data.advances.reduce((s: number, a: any) => {
-        const disc = effectiveDiscountByMonth[a.month] ?? 0;
-        const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-        return s + netSp + disc;
-      }, 0)
+    ? data.advances.reduce((s: number, a: any) => s + Number(a.advance ?? 0), 0)
     : 0;
 
   const effectiveDocUsd = data
