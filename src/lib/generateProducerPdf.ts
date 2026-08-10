@@ -274,18 +274,17 @@ export async function generateProducerPdf(data: PdfData) {
 
   const advRows = sortedAdvances.map(a => {
     const discount = data.discountByMonth[a.month] ?? 0;
-    const netSpecial = showSpecialCols && a.netClp && a.exchangeRate ? Number(a.netClp) / Number(a.exchangeRate) : 0;
-    const anticipoUsd = showSpecialCols ? netSpecial + discount : a.advance;
-    const usdPerKg = showSpecialCols && data.dryKg > 0 ? anticipoUsd / Number(data.dryKg) : a.centsPerKg / 100;
-    const net = showSpecialCols ? netSpecial : a.advance - discount;
+    const anticipoUsd = a.advance;
+    const usdPerKg = a.centsPerKg / 100;
+    const net = a.advance - discount;
     const row: string[] = [MONTHS_FULL[a.month - 1], fmt(usdPerKg), `USD ${fmt(anticipoUsd)}`];
     if (showDiscount) {
       row.push(discount > 0 ? `-USD ${fmt(discount)}` : '-');
       row.push(`USD ${fmt(net)}`);
     }
     if (showSpecialCols) {
-      const netClp = a.netClp ?? null;
       const tc = a.exchangeRate ?? null;
+      const netClp = tc ? net * tc : null;
       row.push(netClp ? `CLP ${fmtClp(netClp)}` : '-');
       row.push(tc ? `$${tc.toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '-');
     }
@@ -293,16 +292,15 @@ export async function generateProducerPdf(data: PdfData) {
     row.push(a.paidDate ? new Date(a.paidDate + 'T12:00:00').toLocaleDateString('es-CL') : '-');
     return row;
   });
-  const totalAnticipoUsd = data.advances.reduce((s, a) => {
-    const discount = data.discountByMonth[a.month] ?? 0;
-    const netSpecial = showSpecialCols && a.netClp && a.exchangeRate ? Number(a.netClp) / Number(a.exchangeRate) : 0;
-    return s + (showSpecialCols ? netSpecial + discount : a.advance);
-  }, 0);
-  const totalUsdKg = showSpecialCols && data.dryKg > 0 ? totalAnticipoUsd / Number(data.dryKg) : data.advances.reduce((s, a) => s + a.centsPerKg / 100, 0);
+  const totalAnticipoUsd = data.advances.reduce((s, a) => s + a.advance, 0);
+  const totalUsdKg = data.advances.reduce((s, a) => s + a.centsPerKg / 100, 0);
   const totalDiscount = data.advances.reduce((s, a) => s + (data.discountByMonth[a.month] ?? 0), 0);
-  const totalNet = showSpecialCols ? data.advances.reduce((s, a) => s + (a.netClp && a.exchangeRate ? Number(a.netClp) / Number(a.exchangeRate) : 0), 0) : data.totalAdvances - totalDiscount;
-  const paidNetSum = data.advances.filter(a => a.paid).reduce((s, a) => s + (showSpecialCols ? (a.netClp && a.exchangeRate ? Number(a.netClp) / Number(a.exchangeRate) : 0) : a.advance - (data.discountByMonth[a.month] ?? 0)), 0);
-  const totalNetClp = data.advances.reduce((s, a) => s + (a.netClp ?? 0), 0);
+  const totalNet = totalAnticipoUsd - totalDiscount;
+  const paidNetSum = data.advances.filter(a => a.paid).reduce((s, a) => s + (a.advance - (data.discountByMonth[a.month] ?? 0)), 0);
+  const totalNetClp = data.advances.reduce((s, a) => {
+    const disc = data.discountByMonth[a.month] ?? 0;
+    return s + (a.exchangeRate ? (a.advance - disc) * Number(a.exchangeRate) : 0);
+  }, 0);
   const totalRow: string[] = ['TOTAL', fmt(totalUsdKg), `USD ${fmt(totalAnticipoUsd)}`];
   if (showDiscount) totalRow.push(`-USD ${fmt(totalDiscount)}`, `USD ${fmt(totalNet)}`);
   if (showSpecialCols) {
