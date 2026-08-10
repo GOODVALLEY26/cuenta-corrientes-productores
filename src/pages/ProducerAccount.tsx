@@ -387,23 +387,16 @@ const ProducerAccount = () => {
   };
 
   const addAdvance = async () => {
-    const cents = newAdvCents === '' ? 0 : Number(newAdvCents);
-    const netClp = newAdvTc === '' ? null : Number(newAdvTc);
+    const usdKg = newAdvCents === '' ? NaN : Number(newAdvCents);
     const exRate = newAdvExRate === '' ? null : Number(newAdvExRate);
-    if (isNaN(cents) || (netClp !== null && isNaN(netClp)) || (exRate !== null && isNaN(exRate))) {
-      toast.error('Valores inválidos'); return;
-    }
-    if (isSpecial && (netClp === null || !exRate)) {
-      toast.error('Ingresa Neto CLP y TC'); return;
-    }
-    if (!isSpecial && !cents) { toast.error('Ingresa ¢/kg'); return; }
+    if (!usdKg || isNaN(usdKg)) { toast.error('Ingresa USD/kg'); return; }
+    if (exRate !== null && isNaN(exRate)) { toast.error('TC inválido'); return; }
     const { error } = await supabase.from('advance_rates').insert({
       producer_id: selectedId,
       year,
       month: newAdvMonth,
-      cents_per_kg: cents,
+      cents_per_kg: usdKg * 100,
       user_id: user!.id,
-      net_clp: netClp,
       exchange_rate: exRate,
     } as any);
     if (error) { toast.error(`Error al agregar anticipo: ${error.message}`); return; }
