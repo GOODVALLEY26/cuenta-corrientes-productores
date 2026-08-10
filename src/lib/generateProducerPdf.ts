@@ -382,8 +382,8 @@ export async function generateProducerPdf(data: PdfData) {
     const payRows: string[][] = data.nextAdvance ? (() => {
       const rows: string[][] = [['Mes', nextMonth]];
       if (showSpecialCols) {
-        rows.push(['Neto CLP', data.nextAdvance?.netClp ? `CLP ${fmtClp(Number(data.nextAdvance.netClp))}` : '-']);
         rows.push(['TC', data.nextAdvance?.exchangeRate ? `$${Number(data.nextAdvance.exchangeRate).toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '-']);
+        rows.push(['Neto CLP', data.nextAdvance?.exchangeRate ? `CLP ${fmtClp(data.nextPaymentNet * Number(data.nextAdvance.exchangeRate))}` : '-']);
       }
       rows.push(['Anticipo Bruto', `USD ${fmt(data.nextPaymentGross)}`]);
       rows.push(['Descuento Secado', data.nextDiscount > 0 ? `-USD ${fmt(data.nextDiscount)}` : '-']);
