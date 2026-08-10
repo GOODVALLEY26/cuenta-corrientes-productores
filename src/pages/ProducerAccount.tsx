@@ -261,13 +261,7 @@ const ProducerAccount = () => {
     const hasInitialInvoice = prodInvoices.some(i => i.document_type === 'factura');
     const docType = hasInitialInvoice ? 'Nota de Débito' : 'Factura';
 
-    const isSpecialProd = !!producer?.name?.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
-    const advanceUsdFor = (a: any) => {
-      if (!isSpecialProd) return a.advance;
-      const disc = discountByMonth[a.month] ?? 0;
-      const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-      return netSp + disc;
-    };
+    const advanceUsdFor = (a: any) => a.advance;
     const cumulativeAdvancesToNext = advances
       .filter(a => a.month <= (nextAdvance?.month ?? 12))
       .reduce((s, a) => s + advanceUsdFor(a), 0);
@@ -355,11 +349,7 @@ const ProducerAccount = () => {
   // For Casablanca: "Anticipos acumulados" must equal the sum of the
   // "Anticipo USD" column across all months (Neto USD + Desc. Secado por mes).
   const specialAnticiposAcumUsd = data && isSpecial
-    ? data.advances.reduce((s: number, a: any) => {
-        const disc = effectiveDiscountByMonth[a.month] ?? 0;
-        const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-        return s + netSp + disc;
-      }, 0)
+    ? data.advances.reduce((s: number, a: any) => s + Number(a.advance ?? 0), 0)
     : 0;
 
   const effectiveDocUsd = data
@@ -370,14 +360,14 @@ const ProducerAccount = () => {
             : data.docNeededUsd))
     : 0;
 
-  const saveNetClp = async (advanceId: string) => {
-    const val = tcEditValue === '' ? null : Number(tcEditValue);
-    if (val !== null && isNaN(val)) { toast.error('Valor inválido'); return; }
+  const saveUsdPerKg = async (advanceId: string) => {
+    const val = tcEditValue === '' ? 0 : Number(tcEditValue);
+    if (isNaN(val)) { toast.error('Valor inválido'); return; }
     const { error } = await supabase
       .from('advance_rates')
-      .update({ net_clp: val } as any)
+      .update({ cents_per_kg: val * 100 } as any)
       .eq('id', advanceId);
-    if (error) { toast.error('Error al guardar Neto CLP'); return; }
+    if (error) { toast.error('Error al guardar USD/kg'); return; }
     setEditingTcId(null);
     setTcEditValue('');
     loadData();
@@ -397,23 +387,16 @@ const ProducerAccount = () => {
   };
 
   const addAdvance = async () => {
-    const cents = newAdvCents === '' ? 0 : Number(newAdvCents);
-    const netClp = newAdvTc === '' ? null : Number(newAdvTc);
+    const usdKg = newAdvCents === '' ? NaN : Number(newAdvCents);
     const exRate = newAdvExRate === '' ? null : Number(newAdvExRate);
-    if (isNaN(cents) || (netClp !== null && isNaN(netClp)) || (exRate !== null && isNaN(exRate))) {
-      toast.error('Valores inválidos'); return;
-    }
-    if (isSpecial && (netClp === null || !exRate)) {
-      toast.error('Ingresa Neto CLP y TC'); return;
-    }
-    if (!isSpecial && !cents) { toast.error('Ingresa ¢/kg'); return; }
+    if (!usdKg || isNaN(usdKg)) { toast.error('Ingresa USD/kg'); return; }
+    if (exRate !== null && isNaN(exRate)) { toast.error('TC inválido'); return; }
     const { error } = await supabase.from('advance_rates').insert({
       producer_id: selectedId,
       year,
       month: newAdvMonth,
-      cents_per_kg: cents,
+      cents_per_kg: usdKg * 100,
       user_id: user!.id,
-      net_clp: netClp,
       exchange_rate: exRate,
     } as any);
     if (error) { toast.error(`Error al agregar anticipo: ${error.message}`); return; }
@@ -446,15 +429,8 @@ const ProducerAccount = () => {
     const usd = effectiveDocUsd;
     const nextAdvance = data.nextAdvance;
     const pdfNextDiscount = nextAdvance ? (effectiveDiscountByMonth[nextAdvance.month] ?? 0) : 0;
-    const pdfNextNetSpecial = isSpecial && nextAdvance?.netClp && nextAdvance?.exchangeRate
-      ? Number(nextAdvance.netClp) / Number(nextAdvance.exchangeRate)
-      : 0;
-    const pdfNextPaymentGross = isSpecial && nextAdvance
-      ? pdfNextNetSpecial + pdfNextDiscount
-      : data.nextPaymentGross;
-    const pdfNextPaymentNet = isSpecial && nextAdvance
-      ? pdfNextNetSpecial
-      : data.nextPaymentGross - pdfNextDiscount;
+    const pdfNextPaymentGross = data.nextPaymentGross;
+    const pdfNextPaymentNet = data.nextPaymentGross - pdfNextDiscount;
     const pdfCuotaTcByMonth = data.hasCuotasUsd && tc
       ? Object.fromEntries(Object.keys(data.cuotaClpByMonth ?? {}).map((m) => [Number(m), Number(tc)]))
       : data.cuotaTcByMonth;
@@ -646,44 +622,46 @@ const ProducerAccount = () => {
                         : data.advances
                       ).map((a: any) => {
                      const discount = effectiveDiscountByMonth[a.month] ?? 0;
-                     const netClp = a.netClp;
                      const tc = a.exchangeRate;
-                     // For Casablanca (isSpecial): user enters Neto CLP and TC manually.
-                     // Neto a Pagar USD = Neto CLP / TC; Anticipo USD = Neto + Desc; USD/kg = Anticipo / kg
-                     const netSpecial = (netClp && tc) ? netClp / tc : 0;
-                     const anticipoSpecial = netSpecial + discount;
-                     const usdPerKgSpecial = data.dryKg > 0 ? anticipoSpecial / Number(data.dryKg) : 0;
-                     const net = isSpecial ? netSpecial : (a.advance - discount);
-                     const anticipoUsd = isSpecial ? anticipoSpecial : a.advance;
-                     const usdPerKgDisplay = isSpecial ? usdPerKgSpecial : (a.centsPerKg / 100);
+                     // Casablanca (isSpecial): user enters USD/kg; el secado se calcula solo.
+                     // Anticipo USD = kg × USD/kg; Neto a Pagar = Anticipo - Desc. Secado;
+                     // Neto CLP = Neto a Pagar × TC (TC editable)
+                     const net = a.advance - discount;
+                     const anticipoUsd = a.advance;
+                     const usdPerKgDisplay = a.centsPerKg / 100;
+                     const netClp = tc ? net * tc : null;
                      return (
                        <TableRow key={a.id}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                         <TableCell className="text-right">{fmtDec(usdPerKgDisplay, 4)}</TableCell>
-                         <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
-                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
-                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
-                         {isSpecial && (
-                           <TableCell className="text-right p-1">
-                             {editingTcId === a.id ? (
+                         <TableCell className="text-right p-1">
+                           {isSpecial ? (
+                             editingTcId === a.id ? (
                                <Input
                                  type="number"
                                  step="any"
-                                 className="h-8 w-28 text-right ml-auto"
+                                 className="h-8 w-24 text-right ml-auto"
                                  value={tcEditValue}
                                  onChange={(e) => setTcEditValue(e.target.value)}
-                                 onBlur={() => saveNetClp(a.id)}
-                                 onKeyDown={(e) => { if (e.key === 'Enter') saveNetClp(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
+                                 onBlur={() => saveUsdPerKg(a.id)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveUsdPerKg(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
                                  autoFocus
                                />
                              ) : (
                                <button
-                                 className="hover:bg-accent rounded px-2 py-1 text-sm font-bold"
-                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(netClp ? String(netClp) : ''); }}
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm w-full text-right"
+                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(String(usdPerKgDisplay)); }}
                                >
-                                 {netClp ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground font-normal">—</span>}
+                                 {fmtDec(usdPerKgDisplay, 4)}
                                </button>
-                             )}
+                             )
+                           ) : fmtDec(usdPerKgDisplay, 4)}
+                         </TableCell>
+                         <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
+                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         {isSpecial && (
+                           <TableCell className="text-right font-bold">
+                             {netClp ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground font-normal">—</span>}
                            </TableCell>
                          )}
                          {isSpecial && (
@@ -740,33 +718,24 @@ const ProducerAccount = () => {
                       <TableRow className="font-bold bg-muted/50">
                        <TableCell>Total</TableCell>
                        <TableCell></TableCell>
-                       <TableCell className="text-right">USD {fmt(
-                         isSpecial
-                           ? data.advances.reduce((s: number, a: any) => {
-                                const disc = effectiveDiscountByMonth[a.month] ?? 0;
-                               const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-                               return s + netSp + disc;
-                             }, 0)
-                           : data.totalAdvances
-                       )}</TableCell>
+                       <TableCell className="text-right">USD {fmt(data.totalAdvances)}</TableCell>
                        <TableCell></TableCell>
                        <TableCell></TableCell>
                        {isSpecial && (
                          <TableCell className="text-right">
                            CLP {fmtClp(data.advances.reduce((s: number, a: any) => {
-                             return s + (a.netClp ?? 0);
+                             const disc = effectiveDiscountByMonth[a.month] ?? 0;
+                             return s + (a.exchangeRate ? (a.advance - disc) * a.exchangeRate : 0);
                            }, 0))}
                          </TableCell>
                        )}
                        {isSpecial && <TableCell></TableCell>}
                        <TableCell className="text-center">
                           <span className="text-green-600">Pagado: USD {fmt(
-                            isSpecial
-                              ? data.advances.filter((a: any) => a.paid).reduce((s: number, a: any) => {
-                                  const netSp = (a.netClp && a.exchangeRate) ? a.netClp / a.exchangeRate : 0;
-                                  return s + netSp;
-                                }, 0)
-                              : data.paidAdvances
+                            data.advances.filter((a: any) => a.paid).reduce((s: number, a: any) => {
+                              const disc = effectiveDiscountByMonth[a.month] ?? 0;
+                              return s + (a.advance - disc);
+                            }, 0)
                           )}</span>
                        </TableCell>
                        <TableCell></TableCell>
@@ -790,9 +759,8 @@ const ProducerAccount = () => {
                   {data.nextAdvance ? (() => {
                     const nA = data.nextAdvance;
                     const disc = effectiveDiscountByMonth[nA.month] ?? 0;
-                    const netSp = (nA.netClp && nA.exchangeRate) ? nA.netClp / nA.exchangeRate : 0;
-                    const gross = isSpecial ? (netSp + disc) : data.nextPaymentGross;
-                    const net = isSpecial ? netSp : (data.nextPaymentGross - disc);
+                    const gross = data.nextPaymentGross;
+                    const net = data.nextPaymentGross - disc;
                     return (
                      <Table>
                        <TableBody>
@@ -803,12 +771,12 @@ const ProducerAccount = () => {
                          {isSpecial && (
                            <>
                              <TableRow>
-                               <TableCell className="font-medium">Neto CLP</TableCell>
-                               <TableCell className="text-right">{nA.netClp ? `CLP ${fmtClp(nA.netClp)}` : '—'}</TableCell>
-                             </TableRow>
-                             <TableRow>
                                <TableCell className="font-medium">TC</TableCell>
                                <TableCell className="text-right">{nA.exchangeRate ? `$${Number(nA.exchangeRate).toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '—'}</TableCell>
+                             </TableRow>
+                             <TableRow>
+                               <TableCell className="font-medium">Neto CLP</TableCell>
+                               <TableCell className="text-right">{nA.exchangeRate ? `CLP ${fmtClp((data.nextPaymentGross - disc) * Number(nA.exchangeRate))}` : '—'}</TableCell>
                              </TableRow>
                            </>
                          )}
@@ -1098,16 +1066,12 @@ const ProducerAccount = () => {
               </Select>
             </div>
             <div>
-              <Label>Neto CLP</Label>
-              <Input type="number" step="any" value={newAdvTc} onChange={(e) => setNewAdvTc(e.target.value)} />
-            </div>
-            <div>
-              <Label>Tipo de cambio (TC)</Label>
-              <Input type="number" step="any" value={newAdvExRate} onChange={(e) => setNewAdvExRate(e.target.value)} />
-            </div>
-            <div>
-              <Label>¢/kg (opcional)</Label>
+              <Label>USD/kg</Label>
               <Input type="number" step="any" value={newAdvCents} onChange={(e) => setNewAdvCents(e.target.value)} />
+            </div>
+            <div>
+              <Label>Tipo de cambio (TC) — opcional</Label>
+              <Input type="number" step="any" value={newAdvExRate} onChange={(e) => setNewAdvExRate(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
