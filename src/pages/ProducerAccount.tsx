@@ -1074,16 +1074,12 @@ const ProducerAccount = () => {
               </Select>
             </div>
             <div>
-              <Label>Neto CLP</Label>
-              <Input type="number" step="any" value={newAdvTc} onChange={(e) => setNewAdvTc(e.target.value)} />
-            </div>
-            <div>
-              <Label>Tipo de cambio (TC)</Label>
-              <Input type="number" step="any" value={newAdvExRate} onChange={(e) => setNewAdvExRate(e.target.value)} />
-            </div>
-            <div>
-              <Label>¢/kg (opcional)</Label>
+              <Label>USD/kg</Label>
               <Input type="number" step="any" value={newAdvCents} onChange={(e) => setNewAdvCents(e.target.value)} />
+            </div>
+            <div>
+              <Label>Tipo de cambio (TC) — opcional</Label>
+              <Input type="number" step="any" value={newAdvExRate} onChange={(e) => setNewAdvExRate(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
