@@ -360,14 +360,14 @@ const ProducerAccount = () => {
             : data.docNeededUsd))
     : 0;
 
-  const saveNetClp = async (advanceId: string) => {
-    const val = tcEditValue === '' ? null : Number(tcEditValue);
-    if (val !== null && isNaN(val)) { toast.error('Valor inválido'); return; }
+  const saveUsdPerKg = async (advanceId: string) => {
+    const val = tcEditValue === '' ? 0 : Number(tcEditValue);
+    if (isNaN(val)) { toast.error('Valor inválido'); return; }
     const { error } = await supabase
       .from('advance_rates')
-      .update({ net_clp: val } as any)
+      .update({ cents_per_kg: val * 100 } as any)
       .eq('id', advanceId);
-    if (error) { toast.error('Error al guardar Neto CLP'); return; }
+    if (error) { toast.error('Error al guardar USD/kg'); return; }
     setEditingTcId(null);
     setTcEditValue('');
     loadData();
