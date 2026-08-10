@@ -429,15 +429,8 @@ const ProducerAccount = () => {
     const usd = effectiveDocUsd;
     const nextAdvance = data.nextAdvance;
     const pdfNextDiscount = nextAdvance ? (effectiveDiscountByMonth[nextAdvance.month] ?? 0) : 0;
-    const pdfNextNetSpecial = isSpecial && nextAdvance?.netClp && nextAdvance?.exchangeRate
-      ? Number(nextAdvance.netClp) / Number(nextAdvance.exchangeRate)
-      : 0;
-    const pdfNextPaymentGross = isSpecial && nextAdvance
-      ? pdfNextNetSpecial + pdfNextDiscount
-      : data.nextPaymentGross;
-    const pdfNextPaymentNet = isSpecial && nextAdvance
-      ? pdfNextNetSpecial
-      : data.nextPaymentGross - pdfNextDiscount;
+    const pdfNextPaymentGross = data.nextPaymentGross;
+    const pdfNextPaymentNet = data.nextPaymentGross - pdfNextDiscount;
     const pdfCuotaTcByMonth = data.hasCuotasUsd && tc
       ? Object.fromEntries(Object.keys(data.cuotaClpByMonth ?? {}).map((m) => [Number(m), Number(tc)]))
       : data.cuotaTcByMonth;
