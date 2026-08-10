@@ -35,6 +35,7 @@ const ProducerAccount = () => {
   const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
   const [newAdvCents, setNewAdvCents] = useState<string>('');
   const [newAdvTc, setNewAdvTc] = useState<string>('');
+  const [newAdvExRate, setNewAdvExRate] = useState<string>('');
 
   const overrideKey = (kind: string) => `producerAccount:${selectedId}:${year}:${kind}`;
 
@@ -396,9 +397,16 @@ const ProducerAccount = () => {
   };
 
   const addAdvance = async () => {
-    const cents = Number(newAdvCents);
-    if (!cents || isNaN(cents)) { toast.error('Ingresa ¢/kg'); return; }
+    const cents = newAdvCents === '' ? 0 : Number(newAdvCents);
     const netClp = newAdvTc === '' ? null : Number(newAdvTc);
+    const exRate = newAdvExRate === '' ? null : Number(newAdvExRate);
+    if (isNaN(cents) || (netClp !== null && isNaN(netClp)) || (exRate !== null && isNaN(exRate))) {
+      toast.error('Valores inválidos'); return;
+    }
+    if (isSpecial && (netClp === null || !exRate)) {
+      toast.error('Ingresa Neto CLP y TC'); return;
+    }
+    if (!isSpecial && !cents) { toast.error('Ingresa ¢/kg'); return; }
     const { error } = await supabase.from('advance_rates').insert({
       producer_id: selectedId,
       year,
@@ -406,11 +414,13 @@ const ProducerAccount = () => {
       cents_per_kg: cents,
       user_id: user!.id,
       net_clp: netClp,
+      exchange_rate: exRate,
     } as any);
-    if (error) { toast.error('Error al agregar anticipo'); return; }
+    if (error) { toast.error(`Error al agregar anticipo: ${error.message}`); return; }
     setAddOpen(false);
     setNewAdvCents('');
     setNewAdvTc('');
+    setNewAdvExRate('');
     loadData();
   };
 
@@ -1088,12 +1098,16 @@ const ProducerAccount = () => {
               </Select>
             </div>
             <div>
-              <Label>¢/kg</Label>
-              <Input type="number" step="any" value={newAdvCents} onChange={(e) => setNewAdvCents(e.target.value)} />
+              <Label>Neto CLP</Label>
+              <Input type="number" step="any" value={newAdvTc} onChange={(e) => setNewAdvTc(e.target.value)} />
             </div>
             <div>
-              <Label>Neto CLP (opcional)</Label>
-              <Input type="number" step="any" value={newAdvTc} onChange={(e) => setNewAdvTc(e.target.value)} />
+              <Label>Tipo de cambio (TC)</Label>
+              <Input type="number" step="any" value={newAdvExRate} onChange={(e) => setNewAdvExRate(e.target.value)} />
+            </div>
+            <div>
+              <Label>¢/kg (opcional)</Label>
+              <Input type="number" step="any" value={newAdvCents} onChange={(e) => setNewAdvCents(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
