@@ -759,9 +759,8 @@ const ProducerAccount = () => {
                   {data.nextAdvance ? (() => {
                     const nA = data.nextAdvance;
                     const disc = effectiveDiscountByMonth[nA.month] ?? 0;
-                    const netSp = (nA.netClp && nA.exchangeRate) ? nA.netClp / nA.exchangeRate : 0;
-                    const gross = isSpecial ? (netSp + disc) : data.nextPaymentGross;
-                    const net = isSpecial ? netSp : (data.nextPaymentGross - disc);
+                    const gross = data.nextPaymentGross;
+                    const net = data.nextPaymentGross - disc;
                     return (
                      <Table>
                        <TableBody>
@@ -772,12 +771,12 @@ const ProducerAccount = () => {
                          {isSpecial && (
                            <>
                              <TableRow>
-                               <TableCell className="font-medium">Neto CLP</TableCell>
-                               <TableCell className="text-right">{nA.netClp ? `CLP ${fmtClp(nA.netClp)}` : '—'}</TableCell>
-                             </TableRow>
-                             <TableRow>
                                <TableCell className="font-medium">TC</TableCell>
                                <TableCell className="text-right">{nA.exchangeRate ? `$${Number(nA.exchangeRate).toLocaleString('es-CL', { maximumFractionDigits: 2 })}` : '—'}</TableCell>
+                             </TableRow>
+                             <TableRow>
+                               <TableCell className="font-medium">Neto CLP</TableCell>
+                               <TableCell className="text-right">{nA.exchangeRate ? `CLP ${fmtClp((data.nextPaymentGross - disc) * Number(nA.exchangeRate))}` : '—'}</TableCell>
                              </TableRow>
                            </>
                          )}
