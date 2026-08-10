@@ -35,6 +35,7 @@ const ProducerAccount = () => {
   const [newAdvMonth, setNewAdvMonth] = useState<number>(new Date().getMonth() + 1);
   const [newAdvCents, setNewAdvCents] = useState<string>('');
   const [newAdvTc, setNewAdvTc] = useState<string>('');
+  const [newAdvExRate, setNewAdvExRate] = useState<string>('');
 
   const overrideKey = (kind: string) => `producerAccount:${selectedId}:${year}:${kind}`;
 
