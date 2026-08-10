@@ -636,44 +636,46 @@ const ProducerAccount = () => {
                         : data.advances
                       ).map((a: any) => {
                      const discount = effectiveDiscountByMonth[a.month] ?? 0;
-                     const netClp = a.netClp;
                      const tc = a.exchangeRate;
-                     // For Casablanca (isSpecial): user enters Neto CLP and TC manually.
-                     // Neto a Pagar USD = Neto CLP / TC; Anticipo USD = Neto + Desc; USD/kg = Anticipo / kg
-                     const netSpecial = (netClp && tc) ? netClp / tc : 0;
-                     const anticipoSpecial = netSpecial + discount;
-                     const usdPerKgSpecial = data.dryKg > 0 ? anticipoSpecial / Number(data.dryKg) : 0;
-                     const net = isSpecial ? netSpecial : (a.advance - discount);
-                     const anticipoUsd = isSpecial ? anticipoSpecial : a.advance;
-                     const usdPerKgDisplay = isSpecial ? usdPerKgSpecial : (a.centsPerKg / 100);
+                     // Casablanca (isSpecial): user enters USD/kg; el secado se calcula solo.
+                     // Anticipo USD = kg × USD/kg; Neto a Pagar = Anticipo - Desc. Secado;
+                     // Neto CLP = Neto a Pagar × TC (TC editable)
+                     const net = a.advance - discount;
+                     const anticipoUsd = a.advance;
+                     const usdPerKgDisplay = a.centsPerKg / 100;
+                     const netClp = tc ? net * tc : null;
                      return (
                        <TableRow key={a.id}>
                          <TableCell className="font-medium">{MONTHS_FULL[a.month - 1]}</TableCell>
-                         <TableCell className="text-right">{fmtDec(usdPerKgDisplay, 4)}</TableCell>
-                         <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
-                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
-                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
-                         {isSpecial && (
-                           <TableCell className="text-right p-1">
-                             {editingTcId === a.id ? (
+                         <TableCell className="text-right p-1">
+                           {isSpecial ? (
+                             editingTcId === a.id ? (
                                <Input
                                  type="number"
                                  step="any"
-                                 className="h-8 w-28 text-right ml-auto"
+                                 className="h-8 w-24 text-right ml-auto"
                                  value={tcEditValue}
                                  onChange={(e) => setTcEditValue(e.target.value)}
-                                 onBlur={() => saveNetClp(a.id)}
-                                 onKeyDown={(e) => { if (e.key === 'Enter') saveNetClp(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
+                                 onBlur={() => saveUsdPerKg(a.id)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveUsdPerKg(a.id); if (e.key === 'Escape') { setEditingTcId(null); setTcEditValue(''); } }}
                                  autoFocus
                                />
                              ) : (
                                <button
-                                 className="hover:bg-accent rounded px-2 py-1 text-sm font-bold"
-                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(netClp ? String(netClp) : ''); }}
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm w-full text-right"
+                                 onClick={() => { setEditingTcId(a.id); setTcEditValue(String(usdPerKgDisplay)); }}
                                >
-                                 {netClp ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground font-normal">—</span>}
+                                 {fmtDec(usdPerKgDisplay, 4)}
                                </button>
-                             )}
+                             )
+                           ) : fmtDec(usdPerKgDisplay, 4)}
+                         </TableCell>
+                         <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
+                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
+                         {isSpecial && (
+                           <TableCell className="text-right font-bold">
+                             {netClp ? `CLP ${fmtClp(netClp)}` : <span className="text-muted-foreground font-normal">—</span>}
                            </TableCell>
                          )}
                          {isSpecial && (
