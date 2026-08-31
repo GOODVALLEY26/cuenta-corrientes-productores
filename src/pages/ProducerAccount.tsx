@@ -698,7 +698,35 @@ const ProducerAccount = () => {
                            ) : fmtDec(usdPerKgDisplay, 4)}
                          </TableCell>
                          <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
-                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right text-destructive p-1">
+                           {data.method !== 'pago_clp' ? (
+                             editingDiscMonth === a.month ? (
+                               <Input
+                                 type="number"
+                                 step="any"
+                                 placeholder="CLP"
+                                 className="h-8 w-32 text-right ml-auto"
+                                 value={discEditValue}
+                                 onChange={(e) => setDiscEditValue(e.target.value)}
+                                 onBlur={() => saveDiscountClp(a.month)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveDiscountClp(a.month); if (e.key === 'Escape') { setEditingDiscMonth(null); setDiscEditValue(''); } }}
+                                 autoFocus
+                               />
+                             ) : (
+                               <button
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm w-full text-right"
+                                 title="Editar cuota de secado (CLP)"
+                                 onClick={() => { setEditingDiscMonth(a.month); setDiscEditValue(String(data.cuotaClpByMonth?.[a.month] ?? '')); }}
+                               >
+                                 <div>{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</div>
+                                 <div className="text-[11px] text-muted-foreground">
+                                   {(data.cuotaClpByMonth?.[a.month] ?? 0) > 0 ? `CLP ${fmtClp(data.cuotaClpByMonth[a.month])}` : 'Agregar CLP'}
+                                 </div>
+                               </button>
+                             )
+                           ) : (discount > 0 ? `-USD ${fmt(discount)}` : '-')}
+                         </TableCell>
+
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
                          {isSpecial && (
                            <TableCell className="text-right font-bold">
