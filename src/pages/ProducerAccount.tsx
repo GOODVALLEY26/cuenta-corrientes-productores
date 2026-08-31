@@ -419,6 +419,42 @@ const ProducerAccount = () => {
     loadData();
   };
 
+  // Editar / agregar a mano la cuota CLP del descuento de secado de un mes.
+  // Se guarda en "Cuotas de Secado" (installment_payments) para que ambas vistas coincidan.
+  const saveDiscountClp = async (month: number) => {
+    const clp = discEditValue === '' ? 0 : Number(discEditValue);
+    if (isNaN(clp) || clp < 0) { toast.error('Monto inválido'); return; }
+    const rows = (data?.cuotaDetails ?? []).filter((p: any) => p.month === month);
+    if (rows.length > 0) {
+      const row = rows[0];
+      const tc = row.exchange_rate ? Number(row.exchange_rate) : null;
+      const { error } = await supabase
+        .from('installment_payments')
+        .update({ amount_clp: clp, amount_usd: tc ? clp / tc : row.amount_usd })
+        .eq('id', row.id);
+      if (error) { toast.error('Error al guardar cuota'); return; }
+    } else {
+      const dryInvoiceId = data?.dryInvoices?.[0]?.id;
+      if (!dryInvoiceId) { toast.error('El productor no tiene facturas de secado'); return; }
+      const maxNum = (data?.cuotaDetails ?? []).reduce((m: number, p: any) => Math.max(m, p.installment_number ?? 0), 0);
+      const { error } = await supabase.from('installment_payments').insert({
+        producer_id: selectedId,
+        drying_invoice_id: dryInvoiceId,
+        user_id: user!.id,
+        installment_number: maxNum + 1,
+        month,
+        year,
+        amount_clp: clp,
+        paid: false,
+      } as any);
+      if (error) { toast.error(`Error al agregar cuota: ${error.message}`); return; }
+    }
+    setEditingDiscMonth(null);
+    setDiscEditValue('');
+    loadData();
+  };
+
+
   const setPaidDate = async (id: string, date: string) => {
     const payload: any = date
       ? { paid: true, paid_date: date }
