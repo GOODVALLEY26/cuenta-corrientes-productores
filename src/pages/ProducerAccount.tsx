@@ -36,6 +36,9 @@ const ProducerAccount = () => {
   const [newAdvCents, setNewAdvCents] = useState<string>('');
   const [newAdvTc, setNewAdvTc] = useState<string>('');
   const [newAdvExRate, setNewAdvExRate] = useState<string>('');
+  const [editingDiscMonth, setEditingDiscMonth] = useState<number | null>(null);
+  const [discEditValue, setDiscEditValue] = useState<string>('');
+
 
   const overrideKey = (kind: string) => `producerAccount:${selectedId}:${year}:${kind}`;
 
@@ -313,6 +316,8 @@ const ProducerAccount = () => {
       cuotaUsdByMonth,
       paidByMonth,
       prodInvoices,
+      dryInvoices,
+
     });
     // overrides are persisted in localStorage; do not reset here
   };
@@ -413,6 +418,42 @@ const ProducerAccount = () => {
     if (error) { toast.error('Error al eliminar'); return; }
     loadData();
   };
+
+  // Editar / agregar a mano la cuota CLP del descuento de secado de un mes.
+  // Se guarda en "Cuotas de Secado" (installment_payments) para que ambas vistas coincidan.
+  const saveDiscountClp = async (month: number) => {
+    const clp = discEditValue === '' ? 0 : Number(discEditValue);
+    if (isNaN(clp) || clp < 0) { toast.error('Monto inválido'); return; }
+    const rows = (data?.cuotaDetails ?? []).filter((p: any) => p.month === month);
+    if (rows.length > 0) {
+      const row = rows[0];
+      const tc = row.exchange_rate ? Number(row.exchange_rate) : null;
+      const { error } = await supabase
+        .from('installment_payments')
+        .update({ amount_clp: clp, amount_usd: tc ? clp / tc : row.amount_usd })
+        .eq('id', row.id);
+      if (error) { toast.error('Error al guardar cuota'); return; }
+    } else {
+      const dryInvoiceId = data?.dryInvoices?.[0]?.id;
+      if (!dryInvoiceId) { toast.error('El productor no tiene facturas de secado'); return; }
+      const maxNum = (data?.cuotaDetails ?? []).reduce((m: number, p: any) => Math.max(m, p.installment_number ?? 0), 0);
+      const { error } = await supabase.from('installment_payments').insert({
+        producer_id: selectedId,
+        drying_invoice_id: dryInvoiceId,
+        user_id: user!.id,
+        installment_number: maxNum + 1,
+        month,
+        year,
+        amount_clp: clp,
+        paid: false,
+      } as any);
+      if (error) { toast.error(`Error al agregar cuota: ${error.message}`); return; }
+    }
+    setEditingDiscMonth(null);
+    setDiscEditValue('');
+    loadData();
+  };
+
 
   const setPaidDate = async (id: string, date: string) => {
     const payload: any = date
@@ -657,7 +698,35 @@ const ProducerAccount = () => {
                            ) : fmtDec(usdPerKgDisplay, 4)}
                          </TableCell>
                          <TableCell className="text-right">USD {fmt(anticipoUsd)}</TableCell>
-                         <TableCell className="text-right text-destructive">{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</TableCell>
+                         <TableCell className="text-right text-destructive p-1">
+                           {data.method !== 'pago_clp' ? (
+                             editingDiscMonth === a.month ? (
+                               <Input
+                                 type="number"
+                                 step="any"
+                                 placeholder="CLP"
+                                 className="h-8 w-32 text-right ml-auto"
+                                 value={discEditValue}
+                                 onChange={(e) => setDiscEditValue(e.target.value)}
+                                 onBlur={() => saveDiscountClp(a.month)}
+                                 onKeyDown={(e) => { if (e.key === 'Enter') saveDiscountClp(a.month); if (e.key === 'Escape') { setEditingDiscMonth(null); setDiscEditValue(''); } }}
+                                 autoFocus
+                               />
+                             ) : (
+                               <button
+                                 className="hover:bg-accent rounded px-2 py-1 text-sm w-full text-right"
+                                 title="Editar cuota de secado (CLP)"
+                                 onClick={() => { setEditingDiscMonth(a.month); setDiscEditValue(String(data.cuotaClpByMonth?.[a.month] ?? '')); }}
+                               >
+                                 <div>{discount > 0 ? `-USD ${fmt(discount)}` : '-'}</div>
+                                 <div className="text-[11px] text-muted-foreground">
+                                   {(data.cuotaClpByMonth?.[a.month] ?? 0) > 0 ? `CLP ${fmtClp(data.cuotaClpByMonth[a.month])}` : 'Agregar CLP'}
+                                 </div>
+                               </button>
+                             )
+                           ) : (discount > 0 ? `-USD ${fmt(discount)}` : '-')}
+                         </TableCell>
+
                          <TableCell className="text-right font-bold">USD {fmt(net)}</TableCell>
                          {isSpecial && (
                            <TableCell className="text-right font-bold">
