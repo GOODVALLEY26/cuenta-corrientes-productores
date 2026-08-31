@@ -36,6 +36,9 @@ const ProducerAccount = () => {
   const [newAdvCents, setNewAdvCents] = useState<string>('');
   const [newAdvTc, setNewAdvTc] = useState<string>('');
   const [newAdvExRate, setNewAdvExRate] = useState<string>('');
+  const [editingDiscMonth, setEditingDiscMonth] = useState<number | null>(null);
+  const [discEditValue, setDiscEditValue] = useState<string>('');
+
 
   const overrideKey = (kind: string) => `producerAccount:${selectedId}:${year}:${kind}`;
 
@@ -313,6 +316,8 @@ const ProducerAccount = () => {
       cuotaUsdByMonth,
       paidByMonth,
       prodInvoices,
+      dryInvoices,
+
     });
     // overrides are persisted in localStorage; do not reset here
   };
