@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import Producers from "@/pages/Producers";
 import DryKg from "@/pages/DryKg";
 import Advances from "@/pages/Advances";
+import AdvancesDashboard from "@/pages/AdvancesDashboard";
 import DryingInvoices from "@/pages/DryingInvoices";
 import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
