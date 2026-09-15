@@ -66,8 +66,8 @@ const AdvancesDashboard = () => {
   const getKg = (pid: string) => Number(dryKgs.find(d => d.producer_id === pid)?.dry_kg ?? 0);
   const isSpecial = (name: string) => name.toLowerCase().includes(SPECIAL_PRODUCER_MATCH);
 
-  const advanceUsd = (p: Producer, rate: Rate) =>
-    isSpecial(p.name) ? getKg(p.id) * Number(rate.cents_per_kg) : (getKg(p.id) * Number(rate.cents_per_kg)) / 100;
+  // USD del anticipo = kg deshidratados x (¢/kg / 100), igual que en Cuenta Corriente
+  const advanceUsd = (p: Producer, rate: Rate) => (getKg(p.id) * Number(rate.cents_per_kg)) / 100;
 
   const rows = producers
     .map(p => {
