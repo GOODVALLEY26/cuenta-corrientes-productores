@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Users, BarChart3, FileText, DollarSign, Settings, LogOut, Menu, X,
-  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen, CreditCard, Download, Wallet
+  TrendingUp, Receipt, ArrowLeftRight, Percent, BookOpen, CreditCard, Download, Wallet, Activity
 } from 'lucide-react';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { path: '/productores', label: 'Productores', icon: Users },
   { path: '/kilos-secos', label: 'Kilos Secos', icon: TrendingUp },
   { path: '/anticipos', label: 'Anticipos', icon: DollarSign },
+  { path: '/panel-anticipos', label: 'Panel Anticipos', icon: Activity },
   { path: '/facturas-secado', label: 'Facturas Secado', icon: Receipt },
   { path: '/facturas-productores', label: 'Facturas Productores', icon: FileText },
   { path: '/flujos-pago', label: 'Flujos de Pago', icon: ArrowLeftRight },

@@ -10,6 +10,7 @@ import Dashboard from "@/pages/Dashboard";
 import Producers from "@/pages/Producers";
 import DryKg from "@/pages/DryKg";
 import Advances from "@/pages/Advances";
+import AdvancesDashboard from "@/pages/AdvancesDashboard";
 import DryingInvoices from "@/pages/DryingInvoices";
 import ProducerInvoices from "@/pages/ProducerInvoices";
 import PaymentFlows from "@/pages/PaymentFlows";
@@ -43,6 +44,7 @@ const ProtectedRoutes = () => {
         <Route path="/productores" element={<Producers />} />
         <Route path="/kilos-secos" element={<DryKg />} />
         <Route path="/anticipos" element={<Advances />} />
+        <Route path="/panel-anticipos" element={<AdvancesDashboard />} />
         <Route path="/facturas-secado" element={<DryingInvoices />} />
         <Route path="/facturas-productores" element={<ProducerInvoices />} />
         <Route path="/flujos-pago" element={<PaymentFlows />} />
