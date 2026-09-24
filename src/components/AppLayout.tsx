@@ -25,10 +25,11 @@ const navItems = [
   { path: '/respaldo', label: 'Respaldo', icon: Download },
 ];
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children, panelOnly = false }: { children: React.ReactNode; panelOnly?: boolean }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const visibleItems = panelOnly ? navItems.filter(n => n.path === '/panel-anticipos') : navItems;
 
   return (
     <div className="flex min-h-screen">
@@ -52,7 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-2">
-          {navItems.map(({ path, label, icon: Icon }) => (
+          {visibleItems.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
