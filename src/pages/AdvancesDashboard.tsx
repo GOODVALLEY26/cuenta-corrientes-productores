@@ -25,6 +25,9 @@ type DryKg = { producer_id: string; dry_kg: number };
 const fmtUsd = (n: number) =>
   'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const fmtUsdShort = (n: number) =>
+  'USD ' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
 const AdvancesDashboard = () => {
   const { user } = useAuth();
   const [producers, setProducers] = useState<Producer[]>([]);
@@ -77,7 +80,10 @@ const AdvancesDashboard = () => {
       const monthState = MONTHS.map((_, i) => {
         const monthRates = own.filter(r => r.month === i + 1);
         if (monthRates.length === 0) return null;
-        return monthRates.every(r => r.paid) ? 'paid' : 'pending';
+        return {
+          paid: monthRates.every(r => r.paid),
+          amount: monthRates.reduce((s, r) => s + advanceUsd(p, r), 0),
+        };
       });
       return { producer: p, total, paid, pending: total - paid, lastPaid, monthState, count: own.length };
     })
@@ -180,16 +186,20 @@ const AdvancesDashboard = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-x-1.5 gap-y-2">
                         {r.monthState.map((state, i) =>
                           state === null ? null : (
-                            <Badge
-                              key={i}
-                              variant={state === 'paid' ? 'outline' : 'destructive'}
-                              className={state === 'paid' ? 'text-green-600 border-green-600/40' : ''}
-                            >
-                              {MONTHS[i]}
-                            </Badge>
+                            <div key={i} className="flex flex-col items-center gap-0.5">
+                              <Badge
+                                variant={state.paid ? 'outline' : 'destructive'}
+                                className={state.paid ? 'text-green-600 border-green-600/40' : ''}
+                              >
+                                {MONTHS[i]}
+                              </Badge>
+                              <span className="text-[10px] leading-none text-muted-foreground whitespace-nowrap">
+                                {fmtUsdShort(state.amount)}
+                              </span>
+                            </div>
                           )
                         )}
                       </div>
