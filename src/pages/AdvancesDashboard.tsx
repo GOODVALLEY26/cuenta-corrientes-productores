@@ -77,7 +77,10 @@ const AdvancesDashboard = () => {
       const monthState = MONTHS.map((_, i) => {
         const monthRates = own.filter(r => r.month === i + 1);
         if (monthRates.length === 0) return null;
-        return monthRates.every(r => r.paid) ? 'paid' : 'pending';
+        return {
+          paid: monthRates.every(r => r.paid),
+          amount: monthRates.reduce((s, r) => s + advanceUsd(p, r), 0),
+        };
       });
       return { producer: p, total, paid, pending: total - paid, lastPaid, monthState, count: own.length };
     })
