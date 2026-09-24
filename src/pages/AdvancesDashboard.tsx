@@ -25,6 +25,9 @@ type DryKg = { producer_id: string; dry_kg: number };
 const fmtUsd = (n: number) =>
   'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const fmtUsdShort = (n: number) =>
+  'USD ' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
 const AdvancesDashboard = () => {
   const { user } = useAuth();
   const [producers, setProducers] = useState<Producer[]>([]);
