@@ -183,16 +183,20 @@ const AdvancesDashboard = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-x-1.5 gap-y-2">
                         {r.monthState.map((state, i) =>
                           state === null ? null : (
-                            <Badge
-                              key={i}
-                              variant={state === 'paid' ? 'outline' : 'destructive'}
-                              className={state === 'paid' ? 'text-green-600 border-green-600/40' : ''}
-                            >
-                              {MONTHS[i]}
-                            </Badge>
+                            <div key={i} className="flex flex-col items-center gap-0.5">
+                              <Badge
+                                variant={state.paid ? 'outline' : 'destructive'}
+                                className={state.paid ? 'text-green-600 border-green-600/40' : ''}
+                              >
+                                {MONTHS[i]}
+                              </Badge>
+                              <span className="text-[10px] leading-none text-muted-foreground whitespace-nowrap">
+                                {fmtUsdShort(state.amount)}
+                              </span>
+                            </div>
                           )
                         )}
                       </div>
