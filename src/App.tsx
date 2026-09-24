@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useRole } from "@/hooks/useRole";
 import AppLayout from "@/components/AppLayout";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -26,8 +27,9 @@ const queryClient = new QueryClient();
 
 const ProtectedRoutes = () => {
   const { user, loading } = useAuth();
+  const { isPanelOnly, loading: roleLoading } = useRole(user?.id);
 
-  if (loading) {
+  if (loading || (user && roleLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -36,6 +38,17 @@ const ProtectedRoutes = () => {
   }
 
   if (!user) return <Auth />;
+
+  if (isPanelOnly) {
+    return (
+      <AppLayout panelOnly>
+        <Routes>
+          <Route path="/panel-anticipos" element={<AdvancesDashboard />} />
+          <Route path="*" element={<Navigate to="/panel-anticipos" replace />} />
+        </Routes>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
