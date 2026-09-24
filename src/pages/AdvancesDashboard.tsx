@@ -25,8 +25,8 @@ type DryKg = { producer_id: string; dry_kg: number };
 const fmtUsd = (n: number) =>
   'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const fmtUsdShort = (n: number) =>
-  'USD ' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmtRate = (n: number) =>
+  n.toLocaleString('es-CL', { maximumFractionDigits: 4 });
 
 const AdvancesDashboard = () => {
   const { user } = useAuth();
@@ -82,7 +82,7 @@ const AdvancesDashboard = () => {
         if (monthRates.length === 0) return null;
         return {
           paid: monthRates.every(r => r.paid),
-          amount: monthRates.reduce((s, r) => s + advanceUsd(p, r), 0),
+          cents: monthRates.reduce((s, r) => s + Number(r.cents_per_kg), 0),
         };
       });
       return { producer: p, total, paid, pending: total - paid, lastPaid, monthState, count: own.length };
@@ -197,7 +197,7 @@ const AdvancesDashboard = () => {
                                 {MONTHS[i]}
                               </Badge>
                               <span className="text-[10px] leading-none text-muted-foreground whitespace-nowrap">
-                                {fmtUsdShort(state.amount)}
+                                {fmtRate(state.cents)} ¢/kg
                               </span>
                             </div>
                           )
