@@ -26,7 +26,7 @@ const fmtUsd = (n: number) =>
   'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const fmtRate = (n: number) =>
-  n.toLocaleString('es-CL', { maximumFractionDigits: 4 });
+  n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 
 const AdvancesDashboard = () => {
   const { user } = useAuth();
@@ -75,14 +75,16 @@ const AdvancesDashboard = () => {
       const own = rates.filter(r => r.producer_id === p.id);
       const total = own.reduce((s, r) => s + advanceUsd(p, r), 0);
       const paid = own.filter(r => r.paid).reduce((s, r) => s + advanceUsd(p, r), 0);
-      const paidDates = own.filter(r => r.paid && r.paid_date).map(r => r.paid_date!) as string[];
+      const paidDates = own
+        .filter((r): r is Rate & { paid_date: string } => r.paid && r.paid_date !== null)
+        .map(r => r.paid_date);
       const lastPaid = paidDates.sort().slice(-1)[0] ?? null;
       const monthState = MONTHS.map((_, i) => {
         const monthRates = own.filter(r => r.month === i + 1);
         if (monthRates.length === 0) return null;
         return {
           paid: monthRates.every(r => r.paid),
-          cents: monthRates.reduce((s, r) => s + Number(r.cents_per_kg), 0),
+          usdPerKg: monthRates.reduce((s, r) => s + Number(r.cents_per_kg), 0) / 100,
         };
       });
       return { producer: p, total, paid, pending: total - paid, lastPaid, monthState, count: own.length };
@@ -197,7 +199,7 @@ const AdvancesDashboard = () => {
                                 {MONTHS[i]}
                               </Badge>
                               <span className="text-[10px] leading-none text-muted-foreground whitespace-nowrap">
-                                {fmtRate(state.cents)} ¢/kg
+                                {fmtRate(state.usdPerKg)} USD/KG
                               </span>
                             </div>
                           )
