@@ -26,7 +26,7 @@ const fmtUsd = (n: number) =>
   'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const fmtRate = (n: number) =>
-  n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+  n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const AdvancesDashboard = () => {
   const { user } = useAuth();
