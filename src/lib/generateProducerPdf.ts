@@ -578,7 +578,7 @@ export async function generateProducerPdf(data: PdfData) {
 
   // Historial de pagos de IVA (se muestran los más recientes para no pasar de 2 páginas)
   const ivaPaysAll = [...(data.ivaPayments ?? [])].sort((a, b) => a.payment_date.localeCompare(b.payment_date));
-  const MAX_IVA_ROWS = 15;
+  const MAX_IVA_ROWS = 12;
   const ivaOmitted = Math.max(0, ivaPaysAll.length - MAX_IVA_ROWS);
   const ivaPays = ivaPaysAll.slice(-MAX_IVA_ROWS);
   if (ivaPays.length > 0) {
@@ -630,7 +630,7 @@ export async function generateProducerPdf(data: PdfData) {
 
     const sorted = [...invoices].sort((a, b) => a.date.localeCompare(b.date));
     // Se muestran los documentos más recientes para mantener el PDF en 2 páginas
-    const MAX_INV_ROWS = 25;
+    const MAX_INV_ROWS = 20;
     const invOmitted = Math.max(0, sorted.length - MAX_INV_ROWS);
     const shown = sorted.slice(-MAX_INV_ROWS);
     const invRows = shown.map(inv => [
@@ -687,7 +687,7 @@ export async function generateProducerPdf(data: PdfData) {
   };
 
   let doc = build(1);
-  for (const s of [0.94, 0.88, 0.82, 0.76, 0.7, 0.64]) {
+  for (const s of [0.94, 0.88, 0.82, 0.76, 0.7, 0.64, 0.58]) {
     if (doc.getNumberOfPages() <= 2) break;
     doc = build(s);
   }
