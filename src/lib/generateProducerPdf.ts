@@ -629,7 +629,11 @@ export async function generateProducerPdf(data: PdfData) {
     };
 
     const sorted = [...invoices].sort((a, b) => a.date.localeCompare(b.date));
-    const invRows = sorted.map(inv => [
+    // Se muestran los documentos más recientes para mantener el PDF en 2 páginas
+    const MAX_INV_ROWS = 25;
+    const invOmitted = Math.max(0, sorted.length - MAX_INV_ROWS);
+    const shown = sorted.slice(-MAX_INV_ROWS);
+    const invRows = shown.map(inv => [
       inv.invoice_number || '-',
       docTypeLabels[inv.document_type] ?? inv.document_type,
       new Date(inv.date + 'T12:00:00').toLocaleDateString('es-CL'),
@@ -637,6 +641,9 @@ export async function generateProducerPdf(data: PdfData) {
       `$${Number(inv.exchange_rate).toLocaleString('es-CL')}`,
       `USD ${fmt(Number(inv.amount_usd))}`,
     ]);
+    if (invOmitted > 0) {
+      invRows.push([`+ ${invOmitted} documentos anteriores no incluidos (ver Respaldo)`, '', '', '', '', '']);
+    }
 
     // Total row
     invRows.push([
@@ -647,7 +654,7 @@ export async function generateProducerPdf(data: PdfData) {
     ]);
 
     autoTable(doc, {
-      startY: invY + 10,
+      startY: invY + 10 * scale,
       margin: { left: m + 1, right: m + 1 },
       tableWidth: cw - 2,
       theme: 'grid',
