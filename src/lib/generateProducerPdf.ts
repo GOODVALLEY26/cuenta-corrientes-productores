@@ -593,8 +593,11 @@ export async function generateProducerPdf(data: PdfData) {
         `CLP ${fmtClp(Number(p.amount_clp))}`,
         p.notes ?? '-',
       ]);
+    if (ivaOmitted > 0) {
+      ipRows.push(['', '', `+ ${ivaOmitted} pagos anteriores no incluidos (ver Respaldo)`]);
+    }
     autoTable(doc, {
-      startY: ipY + 12,
+      startY: ipY + 12 * scale,
       head: [['Fecha', 'Monto CLP', 'Notas']],
       body: ipRows,
       margin: { left: m + 3, right: m + 3 },
