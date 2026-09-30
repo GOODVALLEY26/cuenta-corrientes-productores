@@ -576,8 +576,11 @@ export async function generateProducerPdf(data: PdfData) {
   safeCardBorder(doc, m, iY, cw, bY + bH - iY + 3, iPage);
   y = bY + bH + 3 + sp;
 
-  // Historial de pagos de IVA
-  const ivaPays = data.ivaPayments ?? [];
+  // Historial de pagos de IVA (se muestran los más recientes para no pasar de 2 páginas)
+  const ivaPaysAll = [...(data.ivaPayments ?? [])].sort((a, b) => a.payment_date.localeCompare(b.payment_date));
+  const MAX_IVA_ROWS = 15;
+  const ivaOmitted = Math.max(0, ivaPaysAll.length - MAX_IVA_ROWS);
+  const ivaPays = ivaPaysAll.slice(-MAX_IVA_ROWS);
   if (ivaPays.length > 0) {
     y = ensureSpace(doc, y, Math.min(80, 25 + ivaPays.length * 6) * scale, m);
     const ipY = y;
