@@ -62,16 +62,16 @@ const ACCENT_RED: [number, number, number] = [220, 38, 38];
 const MUTED_BG: [number, number, number] = [245, 240, 250];
 const CARD_BORDER: [number, number, number] = [200, 180, 220];
 
-function sectionTitle(doc: jsPDF, x: number, y: number, w: number, title: string): number {
+function sectionTitle(doc: jsPDF, x: number, y: number, w: number, title: string, scale = 1): number {
   doc.setFillColor(...PRIMARY);
-  doc.roundedRect(x, y, w, 9, 2, 2, 'F');
-  doc.rect(x, y + 5, w, 4, 'F');
-  doc.setFontSize(9);
+  doc.roundedRect(x, y, w, 9 * scale, 2, 2, 'F');
+  doc.rect(x, y + 5 * scale, w, 4 * scale, 'F');
+  doc.setFontSize(9 * scale);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(title, x + 4, y + 6.2);
+  doc.text(title, x + 4, y + 6.2 * scale);
   doc.setTextColor(0, 0, 0);
-  return y + 10;
+  return y + 10 * scale;
 }
 
 function cardBorder(doc: jsPDF, x: number, y: number, w: number, h: number) {
@@ -116,6 +116,11 @@ async function loadLogoAsBase64(): Promise<string | null> {
 }
 
 export async function generateProducerPdf(data: PdfData) {
+  const logoBase64 = await loadLogoAsBase64();
+
+  // Builds the whole document at a given scale. If the result spills onto a
+  // 3rd page, it is rebuilt smaller until it fits in 2 pages.
+  const build = (scale: number): jsPDF => {
   const doc = new jsPDF('p', 'mm', 'letter');
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
@@ -124,7 +129,6 @@ export async function generateProducerPdf(data: PdfData) {
   let y = 0;
 
   // ── HEADER ──
-  const logoBase64 = await loadLogoAsBase64();
   doc.setFillColor(...PRIMARY);
   doc.rect(0, 0, pw, 30, 'F');
 
@@ -164,17 +168,17 @@ export async function generateProducerPdf(data: PdfData) {
   doc.setTextColor(0, 0, 0);
   y = 45;
 
-  const sp = 4;
+  const sp = 4 * scale;
   const halfW = (cw - 5) / 2;
   const lx = m;
   const rx = m + halfW + 5;
-  const fs = 8;
-  const cp = 2;
+  const fs = 8 * scale;
+  const cp = 2 * scale;
 
   // ═══════════════════════════════════════════
   // 1. FACTURACIÓN & SECADO
   // ═══════════════════════════════════════════
-  let ly = sectionTitle(doc, lx, y, halfW, 'Facturación Total');
+  let ly = sectionTitle(doc, lx, y, halfW, 'Facturación Total', scale);
   autoTable(doc, {
     startY: ly,
     margin: { left: lx + 2, right: pw - (lx + halfW) + 2 },
@@ -222,7 +226,7 @@ export async function generateProducerPdf(data: PdfData) {
     }
   }
 
-  let ry = sectionTitle(doc, rx, y, halfW, 'Secado');
+  let ry = sectionTitle(doc, rx, y, halfW, 'Secado', scale);
   autoTable(doc, {
     startY: ry,
     margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
