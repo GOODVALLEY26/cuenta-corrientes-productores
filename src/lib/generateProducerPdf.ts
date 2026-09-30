@@ -317,11 +317,11 @@ export async function generateProducerPdf(data: PdfData) {
 
   // Anticipos table can be tall; reserve enough space for header + several rows,
   // otherwise force a new page to avoid splitting the section header away from the body.
-  const advNeed = Math.min(120, 20 + (advRows.length + 1) * (showSpecialCols ? 5 : 6));
+  const advNeed = Math.min(120, 20 + (advRows.length + 1) * (showSpecialCols ? 5 : 6)) * scale;
   y = ensureSpace(doc, y, advNeed, m);
   const aY = y;
   const aPage = currentPage(doc);
-  sectionTitle(doc, m, aY, cw, `Anticipos ${data.year}`);
+  sectionTitle(doc, m, aY, cw, `Anticipos ${data.year}`, scale);
   const statusCol = 3 + (showDiscount ? 2 : 0) + (showSpecialCols ? 2 : 0);
 
   autoTable(doc, {
@@ -376,13 +376,13 @@ export async function generateProducerPdf(data: PdfData) {
   {
     // Próximo pago + Documento requerido block can be tall (up to ~14 rows on the right side).
     // Reserve ~85mm so the two-column block starts on a new page when needed.
-    y = ensureSpace(doc, y, 85, m);
+    y = ensureSpace(doc, y, 85 * scale, m);
     const pY = y;
     const pPage = currentPage(doc);
     const nextMonth = data.nextAdvance ? MONTHS_FULL[data.nextAdvance.month - 1] : '-';
 
     // LEFT: Próximo Pago
-    let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago');
+    let lpY = sectionTitle(doc, lx, pY, halfW, 'Próximo Pago', scale);
     const payRows: string[][] = data.nextAdvance ? (() => {
       const rows: string[][] = [['Mes', nextMonth]];
       if (showSpecialCols) {
@@ -409,7 +409,7 @@ export async function generateProducerPdf(data: PdfData) {
           if (label === 'Neto a Pagar') {
             h.cell.styles.fontStyle = 'bold';
             h.cell.styles.fillColor = [...MUTED_BG];
-            h.cell.styles.fontSize = 10;
+            h.cell.styles.fontSize = 10 * scale;
             h.cell.styles.textColor = [...PRIMARY];
           }
         if (label.includes('Desc')) h.cell.styles.textColor = [...ACCENT_RED];
@@ -421,7 +421,7 @@ export async function generateProducerPdf(data: PdfData) {
     // LEFT: USD por Facturar (below Próximo Pago)
     if (data.needsDocument) {
       const facY = lpEnd + 2;
-      sectionTitle(doc, lx, facY, halfW, 'USD por Facturar');
+      sectionTitle(doc, lx, facY, halfW, 'USD por Facturar', scale);
       const cumulativeAdv = data.docNeededUsd + data.totalInvoicedUsd;
       const facRows: string[][] = [
         ['Anticipos acumulados', `USD ${fmt(cumulativeAdv)}`],
@@ -456,7 +456,7 @@ export async function generateProducerPdf(data: PdfData) {
     }
 
     // RIGHT: Documento Requerido
-    let rpY = sectionTitle(doc, rx, pY, halfW, 'Documento Requerido');
+    let rpY = sectionTitle(doc, rx, pY, halfW, 'Documento Requerido', scale);
     if (data.needsDocument) {
       const glosa = data.docType === 'Nota de Débito' ? `Ajuste de precio de anticipo ${nextMonth}` : `Anticipo compra fruta temporada ${data.year}`;
       const fechaDoc = (data as any).docDate
@@ -520,7 +520,7 @@ export async function generateProducerPdf(data: PdfData) {
         margin: { left: rx + 2, right: pw - (rx + halfW) + 2 },
         tableWidth: halfW - 4,
         theme: 'plain',
-        styles: { fontSize: 9, cellPadding: 3, overflow: 'ellipsize' },
+        styles: { fontSize: 9 * scale, cellPadding: 3 * scale, overflow: 'ellipsize' },
         body: [['Facturación al día']],
         didParseCell: (h) => { h.cell.styles.textColor = [...ACCENT_GREEN]; h.cell.styles.fontStyle = 'bold'; h.cell.styles.halign = 'center'; },
       });
@@ -536,10 +536,10 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   // 4. BALANCE IVA
   // ═══════════════════════════════════════════
-  y = ensureSpace(doc, y, 45, m);
+  y = ensureSpace(doc, y, 45 * scale, m);
   const iY = y;
   const iPage = currentPage(doc);
-  sectionTitle(doc, m, iY, cw, 'Balance IVA (perspectiva del productor)');
+  sectionTitle(doc, m, iY, cw, 'Balance IVA (perspectiva del productor)', scale);
 
   const ivaAFavor = data.ivaProductor;
   const ivaEnContra = data.ivaSecado;
@@ -548,8 +548,8 @@ export async function generateProducerPdf(data: PdfData) {
 
   const colW = (cw - 24) / 4;
   const colGap = 3;
-  const bY = iY + 12;
-  const bH = 22;
+  const bY = iY + 12 * scale;
+  const bH = 22 * scale;
 
   const boxes = [
     { label: 'IVA Facturado (a su favor)', value: `CLP ${fmtClp(ivaAFavor)}`, bg: MUTED_BG, color: [0, 0, 0] as [number, number, number] },
@@ -562,11 +562,11 @@ export async function generateProducerPdf(data: PdfData) {
     const bx = m + 3 + i * (colW + colGap);
     doc.setFillColor(...b.bg);
     doc.roundedRect(bx, bY, colW, bH, 2, 2, 'F');
-    doc.setFontSize(7);
+    doc.setFontSize(7 * scale);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
     doc.text(b.label, bx + colW / 2, bY + bH * 0.3, { align: 'center' });
-    doc.setFontSize(10);
+    doc.setFontSize(10 * scale);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...b.color);
     doc.text(b.value, bx + colW / 2, bY + bH * 0.7, { align: 'center' });
@@ -579,10 +579,10 @@ export async function generateProducerPdf(data: PdfData) {
   // Historial de pagos de IVA
   const ivaPays = data.ivaPayments ?? [];
   if (ivaPays.length > 0) {
-    y = ensureSpace(doc, y, Math.min(80, 25 + ivaPays.length * 6), m);
+    y = ensureSpace(doc, y, Math.min(80, 25 + ivaPays.length * 6) * scale, m);
     const ipY = y;
     const ipPage = currentPage(doc);
-    sectionTitle(doc, m, ipY, cw, 'Historial de Pagos de IVA');
+    sectionTitle(doc, m, ipY, cw, 'Historial de Pagos de IVA', scale);
     const ipRows = [...ivaPays]
       .sort((a, b) => a.payment_date.localeCompare(b.payment_date))
       .map(p => [
@@ -596,8 +596,8 @@ export async function generateProducerPdf(data: PdfData) {
       body: ipRows,
       margin: { left: m + 3, right: m + 3 },
       tableWidth: cw - 6,
-      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8 },
-      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontSize: 8 * scale },
+      styles: { fontSize: 8 * scale, cellPadding: 2 * scale },
       columnStyles: { 1: { halign: 'right' } },
       theme: 'grid',
     });
@@ -611,10 +611,10 @@ export async function generateProducerPdf(data: PdfData) {
   // ═══════════════════════════════════════════
   const invoices = data.prodInvoices ?? [];
   if (invoices.length > 0) {
-    y = ensureSpace(doc, y, Math.min(120, 25 + (invoices.length + 1) * 6), m);
+    y = ensureSpace(doc, y, Math.min(120, 25 + (invoices.length + 1) * 6) * scale, m);
     const invY = y;
     const invPage = currentPage(doc);
-    sectionTitle(doc, m, invY, cw, 'Historial de Facturas del Productor');
+    sectionTitle(doc, m, invY, cw, 'Historial de Facturas del Productor', scale);
 
     const docTypeLabels: Record<string, string> = {
       factura: 'Factura',
@@ -645,8 +645,8 @@ export async function generateProducerPdf(data: PdfData) {
       margin: { left: m + 1, right: m + 1 },
       tableWidth: cw - 2,
       theme: 'grid',
-      headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 },
-      styles: { fontSize: 8, cellPadding: 2.5, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
+      headStyles: { fillColor: [...PURPLE_LIGHT], fontSize: 8 * scale, halign: 'center', textColor: [255, 255, 255], cellPadding: 2.5 * scale },
+      styles: { fontSize: 8 * scale, cellPadding: 2.5 * scale, lineColor: [...CARD_BORDER], lineWidth: 0.2, overflow: 'ellipsize' },
       head: [['N° Doc', 'Tipo', 'Fecha', 'Monto CLP', 'TC', 'Monto USD']],
       body: invRows,
       columnStyles: {
@@ -670,11 +670,20 @@ export async function generateProducerPdf(data: PdfData) {
     y = invEnd + sp;
   }
 
+    return doc;
+  };
+
+  let doc = build(1);
+  for (const s of [0.94, 0.88, 0.82, 0.76, 0.7, 0.64]) {
+    if (doc.getNumberOfPages() <= 2) break;
+    doc = build(s);
+  }
+
   // ── Footer on last page ──
   doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(150, 150, 150);
-  doc.text('Este documento es un resumen informativo y no constituye un documento tributario.', pw / 2, ph - 6, { align: 'center' });
+  doc.text('Este documento es un resumen informativo y no constituye un documento tributario.', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
 
   doc.save(`Cuenta_Corriente_${data.producer.name.replace(/\s+/g, '_')}_${data.year}.pdf`);
 }
