@@ -279,7 +279,7 @@ const InstallmentPayments = () => {
                                 {inst.paid ? 'Pagado' : 'Pendiente'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{inst.paid_date ? new Date(inst.paid_date).toLocaleDateString('es-CL') : '-'}</TableCell>
+                            <TableCell>{inst.paid_date ? new Date(inst.paid_date + 'T12:00:00').toLocaleDateString('es-CL') : '-'}</TableCell>
                             <TableCell>
                               {!inst.paid && (
                                 <Button size="sm" variant="outline" onClick={() => {

@@ -217,7 +217,7 @@ const ProducerInvoices = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>{inv.invoice_number ?? '-'}</TableCell>
-                  <TableCell>{new Date(inv.date).toLocaleDateString('es-CL')}</TableCell>
+                  <TableCell>{new Date(inv.date + 'T12:00:00').toLocaleDateString('es-CL')}</TableCell>
                   <TableCell className="text-right">${Number(inv.amount_clp).toLocaleString('es-CL')}</TableCell>
                   <TableCell className="text-right">${Number(inv.iva_clp || 0).toLocaleString('es-CL')}</TableCell>
                   <TableCell className="text-right">{Number(inv.exchange_rate).toLocaleString('es-CL')}</TableCell>
