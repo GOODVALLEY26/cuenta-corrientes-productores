@@ -11,16 +11,18 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const [p, k, pf, di] = await Promise.all([
+      const [p, k, ar, di] = await Promise.all([
         supabase.from('producers').select('id', { count: 'exact', head: true }),
-        supabase.from('dry_kg_reports').select('dry_kg'),
-        supabase.from('payment_flows').select('advance_usd'),
+        supabase.from('dry_kg_reports').select('producer_id, dry_kg'),
+        supabase.from('advance_rates').select('producer_id, cents_per_kg').eq('year', new Date().getFullYear()),
         supabase.from('drying_invoices').select('id', { count: 'exact', head: true }).eq('status', 'pendiente'),
       ]);
+      const kgBy = new Map((k.data ?? []).map(r => [r.producer_id, Number(r.dry_kg)]));
       setStats({
         producers: p.count ?? 0,
         totalKg: (k.data ?? []).reduce((s, r) => s + Number(r.dry_kg), 0),
-        totalAdvance: (pf.data ?? []).reduce((s, r) => s + Number(r.advance_usd), 0),
+        // Suma de los anticipos de todos los meses: kg × ¢/kg ÷ 100
+        totalAdvance: (ar.data ?? []).reduce((s, r) => s + ((kgBy.get(r.producer_id) ?? 0) * Number(r.cents_per_kg)) / 100, 0),
         pendingInvoices: di.count ?? 0,
       });
     };
