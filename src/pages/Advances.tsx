@@ -103,19 +103,17 @@ const Advances = () => {
     load();
   };
 
-  const getAdvance = (pid: string, month: number) => {
-    const rate = getRate(pid, month);
-    if (!rate) return 0;
-    return (getKg(pid) * rate.cents_per_kg) / 100;
-  };
+  // Suma todos los anticipos del mes (puede haber más de uno por productor)
+  const monthRates = (pid: string, month: number) => rates.filter(r => r.producer_id === pid && r.month === month);
+  const getAdvance = (pid: string, month: number, onlyPaid = false) =>
+    monthRates(pid, month)
+      .filter(r => !onlyPaid || r.paid)
+      .reduce((s, r) => s + (Number(getKg(pid)) * Number(r.cents_per_kg)) / 100, 0);
 
   const monthTotals = MONTHS.map((_, i) => {
     const month = i + 1;
     const total = producers.reduce((sum, p) => sum + getAdvance(p.id, month), 0);
-    const paid = producers.reduce((sum, p) => {
-      const rate = getRate(p.id, month);
-      return sum + (rate?.paid ? getAdvance(p.id, month) : 0);
-    }, 0);
+    const paid = producers.reduce((sum, p) => sum + getAdvance(p.id, month, true), 0);
     return { total, paid, pending: total - paid };
   });
 
