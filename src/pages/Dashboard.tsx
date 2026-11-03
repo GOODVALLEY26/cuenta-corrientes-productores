@@ -32,7 +32,7 @@ const Dashboard = () => {
   const cards = [
     { title: 'Productores', value: stats.producers, icon: Users, fmt: (v: number) => v.toString() },
     { title: 'Kilos Secos Total', value: stats.totalKg, icon: TrendingUp, fmt: (v: number) => v.toLocaleString('es-CL', { maximumFractionDigits: 0 }) + ' kg' },
-    { title: 'Anticipos Totales', value: stats.totalAdvance, icon: DollarSign, fmt: (v: number) => 'USD ' + v.toLocaleString('en-US', { minimumFractionDigits: 2 }) },
+    { title: 'Anticipos Totales', value: stats.totalAdvance, icon: DollarSign, fmt: (v: number) => 'USD ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
     { title: 'Facturas Pendientes', value: stats.pendingInvoices, icon: Receipt, fmt: (v: number) => v.toString() },
   ];
 
