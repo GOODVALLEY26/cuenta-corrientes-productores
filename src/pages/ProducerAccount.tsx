@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { generateProducerPdf } from '@/lib/generateProducerPdf';
+import { pendingInvoiceUsd } from '@/lib/pendingInvoiceUsd';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -270,7 +271,7 @@ const ProducerAccount = () => {
       .reduce((s, a) => s + advanceUsdFor(a), 0);
     // Round to cents: kg × ¢/kg can leave a sub-cent residue vs the invoiced
     // total (e.g. 0.002 USD), which would otherwise show as "por facturar".
-    const docNeededUsd = Math.max(0, Math.round((cumulativeAdvancesToNext - alreadyInvoiced) * 100) / 100);
+    const docNeededUsd = pendingInvoiceUsd(selectedId, cumulativeAdvancesToNext, alreadyInvoiced);
 
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
     const ivaFacturado = prodInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
@@ -363,7 +364,7 @@ const ProducerAccount = () => {
     ? (docUsdOverride !== ''
         ? Number(docUsdOverride)
         : (isSpecial
-            ? Math.max(0, Math.round((specialAnticiposAcumUsd - Number(data.totalInvoicedUsd ?? 0)) * 100) / 100)
+            ? pendingInvoiceUsd(selectedId, specialAnticiposAcumUsd, Number(data.totalInvoicedUsd ?? 0))
             : data.docNeededUsd))
     : 0;
 
