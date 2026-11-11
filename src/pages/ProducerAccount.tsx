@@ -268,7 +268,9 @@ const ProducerAccount = () => {
     const cumulativeAdvancesToNext = advances
       .filter(a => a.month <= (nextAdvance?.month ?? 12))
       .reduce((s, a) => s + advanceUsdFor(a), 0);
-    const docNeededUsd = Math.max(0, cumulativeAdvancesToNext - alreadyInvoiced);
+    // Round to cents: kg × ¢/kg can leave a sub-cent residue vs the invoiced
+    // total (e.g. 0.002 USD), which would otherwise show as "por facturar".
+    const docNeededUsd = Math.max(0, Math.round((cumulativeAdvancesToNext - alreadyInvoiced) * 100) / 100);
 
     const ivaSecado = dryInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
     const ivaFacturado = prodInvoices.reduce((s, i) => s + Number(i.iva_clp ?? 0), 0);
@@ -361,7 +363,7 @@ const ProducerAccount = () => {
     ? (docUsdOverride !== ''
         ? Number(docUsdOverride)
         : (isSpecial
-            ? Math.max(0, specialAnticiposAcumUsd - Number(data.totalInvoicedUsd ?? 0))
+            ? Math.max(0, Math.round((specialAnticiposAcumUsd - Number(data.totalInvoicedUsd ?? 0)) * 100) / 100)
             : data.docNeededUsd))
     : 0;
 
